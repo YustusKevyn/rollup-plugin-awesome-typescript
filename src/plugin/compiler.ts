@@ -13,7 +13,7 @@ export function resolveCompiler(input: Compiler | string | undefined, logger: Lo
       process.exit();
     }
 
-    logger.debug(`Using "${input}"`);
+    logger.info(`Using "${input}"`);
     logger.warn("Your TypeScript compiler may not be compatible with awesome-typescript.");
     return compiler;
   }
@@ -39,11 +39,7 @@ export function resolveCompiler(input: Compiler | string | undefined, logger: Lo
       process.exit();
     }
 
-    logger.debug(`Using TypeScript v${compiler!.version}`);
+    logger.info(`Using TypeScript v${compiler!.version}`);
     return compiler;
   }
-}
-
-export function resolveCompilerOptions(){
-  
 }
