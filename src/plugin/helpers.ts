@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 
 import { lt } from "semver";
+import { exit } from "../util/process";
 import { isRelative } from "../util/path";
 import { applyColor } from "../util/logger/format";
 
@@ -25,7 +26,7 @@ function findHelpers(input: string | undefined, cwd: string, logger: Logger){
       }
       catch {
         logger.error({message: "Could not load the specified helper library.", file: input});
-        process.exit();
+        exit();
       }
       logger.info(`Using helper library at ${applyColor(path.relative(cwd, input), "cyan")}.`);
     }
@@ -39,7 +40,7 @@ function findHelpers(input: string | undefined, cwd: string, logger: Logger){
       }
       catch {
         logger.error({message: `Could not load the specified helper library (resolved from ${applyColor(input, "cyan")}).`, file: resolved});
-        process.exit();
+        exit();
       }
       logger.info(`Using helper library at ${applyColor(input, "cyan")}.`);
     }
@@ -52,7 +53,7 @@ function findHelpers(input: string | undefined, cwd: string, logger: Logger){
       }
       catch {
         logger.error(`Could not load the specified helper library compiler "${input}".`);
-        process.exit();
+        exit();
       }
       logger.info(`Using helper library "${input}"`);
     }
@@ -70,13 +71,13 @@ function findHelpers(input: string | undefined, cwd: string, logger: Logger){
     }
     catch {
       logger.error("Could not load tslib. Check if it is correctly installed.");
-      process.exit();
+      exit();
     }
 
     // Version
     if(typeof config.version !== "string" || lt(config.version, "2.0.0")){
       logger.error("This version of tslib is not compatible with awesome-typescript. Please upgrade to the latest release.");
-      process.exit();
+      exit();
     }
 
     logger.info(`Using tslib v${config.version}`);

@@ -1,12 +1,13 @@
 import type { Compiler, Options } from "../types";
+
 import type { ParsedCommandLine } from "typescript";
 import type { Plugin as RollupPlugin } from "rollup";
 
 import { Logger } from "../util/logger";
-
 import { resolveConfig } from "./config";
-import { resolveCompiler } from "./compiler";
 import { resolveHelpers } from "./helpers";
+import { resolveCompiler } from "./compiler";
+import { createConfigResolutionHost, createResolverHost } from "./host";
 
 console.clear();
 console.log("---------------------------");
@@ -16,12 +17,12 @@ export class Plugin implements RollupPlugin {
 
   private cwd: string = process.cwd();
   private context?: string;
+
+  private logger: Logger;
   
-  private config: ParsedCommandLine;
   private helpers: string;
   private compiler: Compiler;
-  
-  private logger: Logger;
+  private config: ParsedCommandLine;
 
   constructor(options: Options){
     if(options.cwd) this.cwd = options.cwd;
@@ -32,11 +33,19 @@ export class Plugin implements RollupPlugin {
 
     this.helpers = resolveHelpers(options.helpers, this.cwd, this.logger);
     this.compiler = resolveCompiler(options.compiler, this.cwd, this.logger);
-    this.config = resolveConfig(options.config, this.cwd, this.context, this.compiler, this.logger);
+
+    let configResolutionHost = createConfigResolutionHost(this.compiler, this.cwd, this.context);
+    this.config = resolveConfig(options.config, this.compiler, configResolutionHost, this.logger);
+
+    // this.files = this.config.fileNames;
+
+    let resolverHost = createResolverHost(this.compiler, this.config, this.cwd);
+    
   }
 
   resolveId(source: string){
     if(source === "tslib") return "\0tslib";
+    console.log(source);
   }
 
   load(id: string){

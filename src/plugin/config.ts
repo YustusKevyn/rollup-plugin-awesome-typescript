@@ -1,14 +1,19 @@
 import type { Logger } from "../util/logger";
 import type { Compiler } from "../types";
+import type { CompilerOptions } from "typescript";
+import type { ConfigResolutionHost } from "./host/types";
 
 import path from "path";
+import { exit } from "../util/process";
 import { isRelative } from "../util/path";
 import { applyColor } from "../util/logger/format";
-import { CompilerOptions, ModuleKind } from "typescript";
+import { ModuleKind } from "typescript";
 
 const acceptedModuleKinds = [ModuleKind.ES2015, ModuleKind.ES2020, ModuleKind.ES2022, ModuleKind.ESNext];
 
-function findConfigFile(file: string, cwd: string, compiler: Compiler, logger: Logger): string {
+function findConfigFile(file: string, compiler: Compiler, host: ConfigResolutionHost, logger: Logger): string {
+  let cwd = host.getCurrentDirectory();
+
   // Absolute path
   if(path.isAbsolute(file)){
     if(compiler.sys.fileExists(file)) return file;
@@ -36,37 +41,31 @@ function findConfigFile(file: string, cwd: string, compiler: Compiler, logger: L
       cwd = parent;
     }
   }
-
-  process.exit();
+  exit();
 }
 
-function parseConfigFile(file: string, context: string | undefined, compiler: Compiler, logger: Logger){
+function parseConfigFile(file: string,  compiler: Compiler, host: ConfigResolutionHost, logger: Logger){
   let data = compiler.readConfigFile(file, compiler.sys.readFile);
   if(data.error){
     logger.error({message: "Failed to read configuration file.", file});
     logger.diagnostic(data.error);
-    process.exit();
+    exit();
   }
-  
-  let result = compiler.parseJsonConfigFileContent(
-    data.config,
-    compiler.sys,
-    context ?? path.dirname(file)
-  );
 
+  let result = compiler.parseJsonConfigFileContent(data.config, host, host.getContextDirectory(file));
   if(result.errors.length){
     logger.error({message: "Failed to parse configuration file.", file});
     logger.diagnostic(result.errors);
-    process.exit();
+    exit();
   }
   return result;
 }
 
-export function resolveConfig(input: string | undefined, cwd: string, context: string | undefined, compiler: Compiler, logger: Logger){
-  let file = findConfigFile(input ?? "tsconfig.json", cwd, compiler, logger);
-  logger.info(`Using configuration at ${applyColor(path.relative(cwd, file), "cyan")}.`);
+export function resolveConfig(input: string | undefined, compiler: Compiler, host: ConfigResolutionHost, logger: Logger){
+  let file = findConfigFile(input ?? "tsconfig.json", compiler, host, logger);
+  logger.info(`Using configuration at ${applyColor(path.relative(host.getCurrentDirectory(), file), "cyan")}.`);
 
-  let final = parseConfigFile(file, context, compiler, logger);
+  let final = parseConfigFile(file, compiler, host, logger);
   final.options = normalizeOptions(final.options, logger);
   return final;
 }
@@ -76,7 +75,7 @@ function normalizeOptions(options: CompilerOptions, logger: Logger): CompilerOpt
   if(!options.module) options.module = ModuleKind.ESNext;
   else if(!acceptedModuleKinds.includes(options.module)){
     if(options.module) logger.error(`Module kind "${ModuleKind[options.module]}" is incompatible with rollup. Use one of "ES2015", "ES2020", "ES2022" or "ESNext".`);
-    process.exit();
+    exit();
   }
 
   return {

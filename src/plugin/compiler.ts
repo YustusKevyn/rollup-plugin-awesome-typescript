@@ -3,6 +3,7 @@ import type { Logger } from "../util/logger";
 
 import path from "path";
 import { lt } from "semver";
+import { exit } from "../util/process";
 import { isRelative } from "../util/path";
 import { applyColor } from "../util/logger/format";
 
@@ -16,7 +17,7 @@ export function resolveCompiler(input: Compiler | string | undefined, cwd: strin
       try { compiler = require(input); }
       catch {
         logger.error({message: "Could not load the specified TypeScript compiler.", file: input});
-        process.exit();
+        exit();
       }
       logger.info(`Using compiler at ${applyColor(path.relative(cwd, input), "cyan")}.`);
     }
@@ -27,7 +28,7 @@ export function resolveCompiler(input: Compiler | string | undefined, cwd: strin
       try { compiler = require(resolved); }
       catch {
         logger.error({message: `Could not load the specified TypeScript compiler (resolved from ${applyColor(input, "cyan")}).`, file: resolved});
-        process.exit();
+        exit();
       }
       logger.info(`Using compiler at ${applyColor(input, "cyan")}.`);
     }
@@ -37,7 +38,7 @@ export function resolveCompiler(input: Compiler | string | undefined, cwd: strin
       try { compiler = require(input); }
       catch {
         logger.error(`Could not load the specified TypeScript compiler "${input}".`);
-        process.exit();
+        exit();
       }
       logger.info(`Using compiler "${input}"`);
     }
@@ -59,13 +60,13 @@ export function resolveCompiler(input: Compiler | string | undefined, cwd: strin
     try { compiler = require("typescript"); }
     catch {
       logger.error("Could not load TypeScript. Check if it is correctly installed.");
-      process.exit();
+      exit();
     }
 
     // Version
     if(typeof compiler.version !== "string" || lt(compiler.version, "4.0.0")){
       logger.error("This version of TypeScript is not compatible with awesome-typescript. Please upgrade to the latest release.");
-      process.exit();
+      exit();
     }
 
     logger.info(`Using TypeScript v${compiler.version}`);

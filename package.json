@@ -19,6 +19,7 @@
     "build": "bash scripts/build.bash"
   },
   "devDependencies": {
+    "@rollup/pluginutils": "^4.2.1",
     "@types/glob": "^7.2.0",
     "@types/jest": "^28.1.6",
     "@types/semver": "^7.3.10",
