@@ -64,7 +64,7 @@ function parseConfigFile(file: string, context: string | undefined, compiler: Co
 
 export function resolveConfig(input: string | undefined, cwd: string, context: string | undefined, compiler: Compiler, logger: Logger){
   let file = findConfigFile(input ?? "tsconfig.json", cwd, compiler, logger);
-  logger.info(`Using configuration file ${applyColor(path.relative(cwd, file), "cyan")}`);
+  logger.info(`Using configuration at ${applyColor(path.relative(cwd, file), "cyan")}.`);
 
   let final = parseConfigFile(file, context, compiler, logger);
   final.options = normalizeOptions(final.options, logger);
@@ -83,7 +83,6 @@ function normalizeOptions(options: CompilerOptions, logger: Logger): CompilerOpt
     ...options,
     noEmit: false,
     noResolve: false,
-    noEmitHelpers: true,
     importHelpers: true,
     emitDeclarationOnly: false
   };
