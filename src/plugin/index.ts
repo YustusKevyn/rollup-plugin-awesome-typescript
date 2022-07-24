@@ -1,54 +1,71 @@
-import type { Compiler, Options } from "../types";
+import type { Options } from "./types";
+import type { ModuleInfo } from "rollup";
 
-import type { ParsedCommandLine } from "typescript";
-import type { Plugin as RollupPlugin } from "rollup";
+import { LoggerService } from "./services/logger";
+import { CompilerService } from "./services/compiler";
+import { ConfigService } from "./services/config";
+import { HelpersService } from "./services/helpers";
 
-import { Logger } from "../util/logger";
-import { resolveConfig } from "./config";
-import { resolveHelpers } from "./helpers";
-import { resolveCompiler } from "./compiler";
-import { createConfigResolutionHost, createResolverHost } from "./host";
+import { Resolver } from "./core/resolver";
+import { Linker } from "./core/linker";
+import { Scripts } from "./core/scripts";
 
-console.clear();
-console.log("---------------------------");
+export class Plugin {
+  readonly logger: LoggerService;
 
-export class Plugin implements RollupPlugin {
-  readonly name = "awesome-typescript";
+  readonly compiler: CompilerService;
+  readonly helpers: HelpersService;
+  readonly config: ConfigService;
 
-  private cwd: string = process.cwd();
-  private context?: string;
+  readonly resolver: Resolver;
+  readonly linker: Linker;
+  readonly scripts: Scripts;
 
-  private logger: Logger;
-  
-  private helpers: string;
-  private compiler: Compiler;
-  private config: ParsedCommandLine;
+  readonly cwd: string = process.cwd();
+  readonly context?: string;
 
-  constructor(options: Options){
-    if(options.cwd) this.cwd = options.cwd;
-    if(options.context) this.context = options.context;
+  constructor(options: Options) {
+    if (options.cwd !== undefined) this.cwd = options.cwd;
+    if (options.context !== undefined) this.context = options.context;
 
-    let level = options.silent === true ? -1 : options.logLevel !== undefined ? options.logLevel : 2;
-    this.logger = new Logger(level, this.cwd);
+    let level = options.silent ? -1 : options.logLevel;
+    this.logger = new LoggerService(this, level);
 
-    this.helpers = resolveHelpers(options.helpers, this.cwd, this.logger);
-    this.compiler = resolveCompiler(options.compiler, this.cwd, this.logger);
+    this.compiler = new CompilerService(this, options.compiler);
+    this.helpers = new HelpersService(this, options.helpers);
+    this.config = new ConfigService(this, options.config);
 
-    let configResolutionHost = createConfigResolutionHost(this.compiler, this.cwd, this.context);
-    this.config = resolveConfig(options.config, this.compiler, configResolutionHost, this.logger);
-
-    // this.files = this.config.fileNames;
-
-    let resolverHost = createResolverHost(this.compiler, this.config, this.cwd);
-    
+    this.resolver = new Resolver(this);
+    this.linker = new Linker(this);
+    this.scripts = new Scripts(this);
   }
 
-  resolveId(source: string){
-    if(source === "tslib") return "\0tslib";
-    console.log(source);
+  resolveId(id: string, origin?: string) {
+    if (id === "tslib") return this.helpers.file;
+    if (!origin) return null;
+
+    let resolved = this.resolver.resolve(id, origin)?.resolvedFileName;
+    if (!resolved) return null;
+
+    this.logger.debug(
+      `Resolved ${this.logger.applyColor(
+        "cyan",
+        id
+      )} imported by ${this.logger.applyColor(
+        "yellow",
+        origin
+      )} to ${this.logger.applyColor("magenta", resolved)}.`
+    );
+
+    return resolved;
   }
 
-  load(id: string){
-    if(id === "\0tslib") return this.helpers;
+  transform(code: string, id: string) {
+    this.scripts.update(id, code);
+
+    let output = this.scripts.compile(id);
+    if (output) return output.source;
   }
+
+  moduleParsed(info: ModuleInfo) {}
 }

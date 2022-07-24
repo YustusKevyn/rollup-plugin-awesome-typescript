@@ -4,7 +4,9 @@
   "author": "Yanis Morgenegg",
   "license": "MIT",
   "homepage": "https://github.com/YustusKevyn/rollup-plugin-awesome-typescript",
-  "keywords": [],
+  "keywords": [
+    "rollup-plugin"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/YustusKevyn/rollup-plugin-awesome-typescript.git"
@@ -15,15 +17,13 @@
   "files": [
     "lib/**/*"
   ],
-  "scripts": {
-    "build": "bash scripts/build.bash"
-  },
   "devDependencies": {
     "@rollup/pluginutils": "^4.2.1",
     "@types/glob": "^7.2.0",
     "@types/jest": "^28.1.6",
     "@types/semver": "^7.3.10",
     "jest": "^28.1.3",
+    "prettier": "^2.7.1",
     "rollup": "^2.77.0",
     "semver": "^7.3.7",
     "ts-jest": "^28.0.7",

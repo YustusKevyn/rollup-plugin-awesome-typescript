@@ -1,16 +1,12 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
-    "rootDir": "src",
     "strict": true,
     "target": "ESNext",
     "module": "ESNext",
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "moduleResolution": "node",
-    "exactOptionalPropertyTypes": true,
+    "exactOptionalPropertyTypes": true
   },
-  "exclude": [
-    "lib"
-  ]
+  "exclude": ["lib"]
 }

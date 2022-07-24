@@ -1,8 +1,4 @@
-import type typescript from "typescript";
-import type { CompilerOptions, TsConfigSourceFile } from "typescript";
-import type { LogLevel } from "./util/logger";
-
-export type Compiler = typeof typescript;
+import { LogLevel } from "./services/logger";
 
 export interface Options {
   cwd?: string | undefined;
@@ -13,7 +9,7 @@ export interface Options {
 
   config?: string | undefined;
   helpers?: string | undefined;
-  compiler?: Compiler | string | undefined;
+  compiler?: string | undefined;
 
   silent?: boolean | undefined;
   logLevel?: LogLevel | undefined;
