@@ -1,5 +1,5 @@
 import type { Options } from "./types";
-import type { ModuleInfo } from "rollup";
+import type { ModuleInfo, PluginContext } from "rollup";
 
 import { LoggerService } from "./services/logger";
 import { CompilerService } from "./services/compiler";
@@ -8,7 +8,7 @@ import { HelpersService } from "./services/helpers";
 
 import { Resolver } from "./core/resolver";
 import { Linker } from "./core/linker";
-import { Scripts } from "./core/scripts";
+import { Language } from "./core/language";
 
 export class Plugin {
   readonly logger: LoggerService;
@@ -19,7 +19,7 @@ export class Plugin {
 
   readonly resolver: Resolver;
   readonly linker: Linker;
-  readonly scripts: Scripts;
+  readonly language: Language;
 
   readonly cwd: string = process.cwd();
   readonly context?: string;
@@ -37,33 +37,27 @@ export class Plugin {
 
     this.resolver = new Resolver(this);
     this.linker = new Linker(this);
-    this.scripts = new Scripts(this);
+    this.language = new Language(this);
   }
 
-  resolveId(id: string, origin?: string) {
+  resolve(id: string, origin?: string) {
     if (id === "tslib") return this.helpers.file;
     if (!origin) return null;
 
-    let resolved = this.resolver.resolve(id, origin)?.resolvedFileName;
-    if (!resolved) return null;
+    let file = this.resolver.resolve(id, origin)?.resolvedFileName;
+    if (!file) return null;
 
-    this.logger.debug(
-      `Resolved ${this.logger.applyColor(
-        "cyan",
-        id
-      )} imported by ${this.logger.applyColor(
-        "yellow",
-        origin
-      )} to ${this.logger.applyColor("magenta", resolved)}.`
-    );
+    this.logger.debug(`Resolved ${this.logger.formatId(id)} to ${file}`);
 
-    return resolved;
+    return file;
   }
 
-  transform(code: string, id: string) {
-    this.scripts.update(id, code);
+  transform(context: PluginContext, code: string, file: string) {
+    this.language.update(file, code);
 
-    let output = this.scripts.compile(id);
+    let output = this.language.compile(file);
+
+    this.language.check(file);
     if (output) return output.source;
   }
 

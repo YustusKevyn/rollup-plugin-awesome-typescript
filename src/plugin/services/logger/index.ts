@@ -1,129 +1,129 @@
 import type { Plugin } from "../..";
-import type { Diagnostic } from "typescript";
-import type { Color, Mode, Position, Properties } from "./types";
+import type { Background, Color, Mode, Position, Properties } from "./types";
 
 import path from "path";
-import { colors, Level, modes } from "./constants";
-import {
-  DiagnosticCategory,
-  flattenDiagnosticMessageText,
-  getLineAndCharacterOfPosition
-} from "typescript";
+import { Diagnostics } from "./diagnostics";
+import { backgrounds, colors, Level, modes } from "./constants";
 
 export class LoggerService {
-  private plugin: Plugin;
   private level: Level = Level.Success;
+  readonly newLine = "\n";
 
-  constructor(plugin: Plugin, level?: Level) {
-    this.plugin = plugin;
+  readonly diagnostics: Diagnostics;
+
+  constructor(private plugin: Plugin, level?: Level) {
+    this.diagnostics = new Diagnostics(plugin, this);
     if (level !== undefined) this.level = level;
   }
 
-  error(arg: Properties | string) {
+  error(props: Properties | string) {
     if (this.level < Level.Error) return;
-    if (typeof arg === "string") arg = { message: arg };
+    if (typeof props === "string") props = { message: props };
 
-    let header = this.applyModeAndColor("bold", "red", " \u2A2F ");
-    if (arg.code) header += this.formatCode(arg.code) + " ";
-    header += this.applyModeAndColor("bold", "red", arg.message);
-    console.log(header + this.formatBody(arg));
+    let final = this.apply(" ERROR ", "white", "bold", "red");
+    if (props.code) final += " " + this.formatCode(props.code);
+    final += " " + this.apply(props.message, "red", "bold");
+    final += this.formatBody(props, 8) + this.newLine;
+    console.log(final);
   }
 
-  warn(arg: Properties | string) {
+  warn(props: Properties | string) {
     if (this.level < Level.Warn) return;
-    if (typeof arg === "string") arg = { message: arg };
+    if (typeof props === "string") props = { message: props };
 
-    let header = this.applyModeAndColor("bold", "yellow", " \u26A0 ");
-    if (arg.code) header += this.formatCode(arg.code) + " ";
-    header += this.applyModeAndColor("bold", "yellow", arg.message);
-    console.log(header + this.formatBody(arg));
+    let final = this.apply(" WARN ", "white", "bold", "yellow");
+    if (props.code) final += " " + this.formatCode(props.code);
+    final += " " + this.apply(props.message, "yellow", "bold");
+    final += this.formatBody(props, 7) + this.newLine;
+    console.log(final);
   }
 
-  success(arg: Properties | string) {
-    if (this.level < Level.Success) return;
-    if (typeof arg === "string") arg = { message: arg };
-
-    let header = this.applyModeAndColor("bold", "green", " \u2713 ");
-    if (arg.code) header += this.formatCode(arg.code) + " ";
-    header += this.applyColor("green", arg.message);
-    console.log(header + this.formatBody(arg));
-  }
-
-  info(arg: Properties | string) {
+  info(props: Properties | string) {
     if (this.level < Level.Info) return;
-    if (typeof arg === "string") arg = { message: arg };
+    if (typeof props === "string") props = { message: props };
 
-    let header = " \u2022 ";
-    if (arg.code) header += this.formatCode(arg.code) + " ";
-    console.log(header + arg.message + this.formatBody(arg));
+    let final = "";
+    if (props.code) final += this.formatCode(props.code) + " ";
+    final += props.message;
+    final += this.formatBody(props);
+    console.log(final);
   }
 
-  debug(arg: Properties | string) {
+  debug(props: Properties | string) {
     if (this.level < Level.Debug) return;
-    if (typeof arg === "string") arg = { message: arg };
+    if (typeof props === "string") props = { message: props };
 
-    let header = " \u2022 ";
-    if (arg.code) header += this.formatCode(arg.code) + " ";
-    console.log(
-      this.applyMode("dim", header + arg.message + this.formatBody(arg))
-    );
+    let final = "";
+    if (props.code) final += this.formatCode(props.code) + " ";
+    final += props.message;
+    final += this.formatBody(props);
+    console.log(this.applyMode(final, "dim"));
   }
 
-  diagnostic(arg: Diagnostic | Diagnostic[]) {
-    if (!Array.isArray(arg)) arg = [arg];
-    for (let diagnostic of arg) {
-      let props: Properties = {
-        message: flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
-        code: "TS" + diagnostic.code
-      };
-      if (diagnostic.file) {
-        props.file = diagnostic.file.fileName;
-        props.position = getLineAndCharacterOfPosition(
-          diagnostic.file,
-          diagnostic.start!
-        );
-      }
-
-      if (diagnostic.category === DiagnosticCategory.Error) this.error(props);
-      else if (diagnostic.category === DiagnosticCategory.Warning)
-        this.warn(props);
-      else this.info(props);
-    }
+  apply(
+    arg: any,
+    color?: Color | false,
+    mode?: Mode | false,
+    background?: Background | false
+  ) {
+    let final = arg;
+    if (mode) final = this.applyMode(final, mode);
+    if (color) final = this.applyColor(final, color);
+    if (background) final = this.applyBackground(final, background);
+    return final;
   }
 
-  applyMode(mode: Mode, arg: any) {
+  applyMode(arg: any, mode: Mode) {
     let code = modes[mode],
       revert = code === 1 ? 22 : code + 20;
     return `\u001b[${code}m${arg}\u001b[${revert}m`;
   }
 
-  applyColor(color: Color, arg: any) {
+  applyColor(arg: any, color: Color) {
     return `\u001b[${colors[color]}m${arg}\u001b[39m`;
   }
 
-  applyModeAndColor(mode: Mode, color: Color, arg: any) {
-    return this.applyMode(mode, this.applyColor(color, arg));
+  applyBackground(arg: any, color: Background) {
+    return `\u001b[${backgrounds[color]}m${arg}\u001b[49m`;
   }
 
-  formatFile(file: string) {}
+  formatId(id: string) {
+    return this.apply(id, "magenta", "underline");
+  }
+
+  formatFile(file: string) {
+    return this.apply(
+      path.relative(this.plugin.cwd, file),
+      "cyan",
+      "underline"
+    );
+  }
 
   private formatCode(code: string) {
-    return this.applyColor("green", code);
+    return this.applyColor(code, "grey");
   }
 
   private formatLocation(file: string, position?: Position) {
     let final = "at " + this.formatFile(file);
     if (position) {
-      final += ":" + this.applyColor("yellow", position.line);
-      final += ":" + this.applyColor("yellow", position.character);
+      final += ":" + this.applyColor(position.line, "yellow");
+      final += ":" + this.applyColor(position.character, "yellow");
     }
     return final;
   }
 
-  private formatBody(props: Properties) {
-    let final = "";
+  private formatBody(props: Properties, indentation: number = 0) {
+    let final = "",
+      next = this.newLine + " ".repeat(indentation);
+
+    // File
     if (props.file)
-      final += "\n   " + this.formatLocation(props.file, props.position);
+      final += next + this.formatLocation(props.file, props.position);
+    else if (props.id) final += next + this.formatId(props.id);
+
+    // Snippet
+    if (props.snippet) final += this.newLine + next + props.snippet.join(next);
+
     return final;
   }
 }

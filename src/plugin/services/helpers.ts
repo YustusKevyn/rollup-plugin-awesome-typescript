@@ -26,16 +26,11 @@ export class HelpersService {
         } catch {
           logger.error({
             message: "Could not find the specified helper library.",
-            file: id
+            id
           });
           exit();
         }
-        logger.info(
-          `Using helper library at ${logger.applyColor(
-            "cyan",
-            path.relative(this.plugin.cwd, id)
-          )}.`
-        );
+        logger.info(`Using helper library at ${logger.formatId(id)}.`);
       }
 
       // Relative path
@@ -46,17 +41,12 @@ export class HelpersService {
           file = require.resolve(resolved + "/" + config.module);
         } catch {
           logger.error({
-            message: `Could not find the specified helper library (resolved from ${logger.applyColor(
-              "cyan",
-              id
-            )}).`,
-            file: resolved
+            message: "Could not find the specified helper library.",
+            id: resolved
           });
           exit();
         }
-        logger.info(
-          `Using helper library at ${logger.applyColor("cyan", id)}.`
-        );
+        logger.info(`Using helper library at ${logger.formatId(resolved)}.`);
       }
 
       // Package name

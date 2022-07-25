@@ -18,7 +18,7 @@ interface Script {
   version: number;
   snapshot: Snapshot;
   output: Output | null;
-  diagnostics: Diagnostics | null;
+  diagnostics: Diagnostic[] | null;
 }
 
 interface Output {
@@ -26,12 +26,7 @@ interface Output {
   source: string;
 }
 
-interface Diagnostics {
-  syntactic: Diagnostic[];
-  semantic: Diagnostic[];
-}
-
-export class Scripts {
+export class Language {
   private scripts: Record<string, Script> = {};
 
   private host: Host;
@@ -44,8 +39,8 @@ export class Scripts {
     this.service = createLanguageService(this.host, this.registry);
   }
 
-  private create(id: string, snapshot: Snapshot) {
-    return (this.scripts[id] = {
+  private create(file: string, snapshot: Snapshot) {
+    return (this.scripts[file] = {
       version: 0,
       snapshot,
       output: null,
@@ -53,39 +48,39 @@ export class Scripts {
     });
   }
 
-  private add(id: string): Script | null {
-    if (!fs.existsSync(id)) return null;
-    let source = fs.readFileSync(id, "utf-8");
-    return this.create(id, ScriptSnapshot.fromString(source));
+  private add(file: string): Script | null {
+    if (!fs.existsSync(file)) return null;
+    let source = fs.readFileSync(file, "utf-8");
+    return this.create(file, ScriptSnapshot.fromString(source));
   }
 
-  private get(id: string): Script | null {
-    return this.scripts[id] ?? null;
+  private get(file: string): Script | null {
+    return this.scripts[file] ?? null;
   }
 
-  private getVersion(id: string) {
-    return (this.get(id) ?? this.add(id))?.version.toString() ?? "";
+  private getVersion(file: string) {
+    return (this.get(file) ?? this.add(file))?.version.toString() ?? "";
   }
 
-  private getSnapshot(id: string) {
-    return (this.get(id) ?? this.add(id))?.snapshot ?? undefined;
+  private getSnapshot(file: string) {
+    return (this.get(file) ?? this.add(file))?.snapshot ?? undefined;
   }
 
-  private getDiagnostics(id: string): Diagnostics | null {
-    let script = this.get(id) ?? this.add(id);
+  private getDiagnostics(file: string) {
+    let script = this.get(file) ?? this.add(file);
     if (!script) return null;
     if (script.diagnostics) return script.diagnostics;
 
-    return (script.diagnostics = {
-      semantic: this.service.getSemanticDiagnostics(id),
-      syntactic: this.service.getSyntacticDiagnostics(id)
-    });
+    return (script.diagnostics = [
+      ...this.service.getSemanticDiagnostics(file),
+      ...this.service.getSyntacticDiagnostics(file)
+    ]);
   }
 
-  update(id: string, source: string) {
+  update(file: string, source: string) {
     let snapshot = ScriptSnapshot.fromString(source),
-      script = this.get(id);
-    if (!script) return this.create(id, snapshot);
+      script = this.get(file);
+    if (!script) return this.create(file, snapshot);
 
     script.version++;
     script.snapshot = snapshot;
@@ -94,18 +89,28 @@ export class Scripts {
     return script;
   }
 
-  compile(id: string): Output | null {
-    let script = this.get(id) ?? this.add(id);
+  compile(file: string): Output | null {
+    let script = this.get(file) ?? this.add(file);
     if (!script) return null;
     if (script.output) return script.output;
 
-    let result = this.service.getEmitOutput(id),
+    let result = this.service.getEmitOutput(file),
       output: Partial<Output> = {};
     for (let file of result.outputFiles) {
       if (file.name.endsWith(".js")) output.source = file.text;
       else if (file.name.endsWith(".dts")) output.declarations = file.text;
     }
     return output as Output;
+  }
+
+  check(file: string) {
+    let script = this.get(file) ?? this.add(file);
+    if (!file) return null;
+
+    let diagnostics = this.getDiagnostics(file);
+    if (!diagnostics) return null;
+
+    this.plugin.logger.diagnostics.print(diagnostics);
   }
 
   private createHost(): Host {

@@ -37,10 +37,7 @@ export class ConfigService {
       let resolved = path.resolve(this.plugin.cwd, file);
       if (!compiler.sys.fileExists(resolved)) {
         logger.error({
-          message: `Configuration file does not exists (resolved from ${logger.applyColor(
-            "cyan",
-            file
-          )}).`,
+          message: "Configuration file does not exists.",
           file: resolved
         });
         exit();
@@ -61,22 +58,14 @@ export class ConfigService {
         let parent = path.dirname(dir);
         if (parent === dir) {
           logger.error(
-            `Configuration file with name ${logger.applyColor(
-              "cyan",
-              file
-            )} does not exist in directory tree.`
+            `Configuration file with name "${file}" does not exist in directory tree.`
           );
           break;
         }
         dir = parent;
       }
     }
-    logger.info(
-      `Using configuration at ${logger.applyColor(
-        "cyan",
-        path.relative(this.plugin.cwd, file)
-      )}.`
-    );
+    logger.info(`Using configuration at ${logger.formatFile(file)}.`);
     return file;
   }
 
@@ -87,7 +76,7 @@ export class ConfigService {
 
     if (data.error) {
       logger.error({ message: "Failed to read configuration file.", file });
-      logger.diagnostic(data.error);
+      logger.diagnostics.print(data.error);
       exit();
     }
 
@@ -99,7 +88,7 @@ export class ConfigService {
 
     if (result.errors.length) {
       logger.error({ message: "Failed to parse configuration file.", file });
-      logger.diagnostic(result.errors);
+      logger.diagnostics.print(result.errors);
       exit();
     }
     return result;

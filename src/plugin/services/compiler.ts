@@ -28,16 +28,11 @@ export class CompilerService {
         } catch {
           logger.error({
             message: "Could not find the specified TypeScript compiler.",
-            file: id
+            id
           });
           exit();
         }
-        logger.info(
-          `Using compiler at ${logger.applyColor(
-            "cyan",
-            path.relative(this.plugin.cwd, id)
-          )}.`
-        );
+        logger.info(`Using compiler at ${logger.formatId(id)}.`);
       }
 
       // Relative path
@@ -47,16 +42,12 @@ export class CompilerService {
           file = require.resolve(resolved);
         } catch {
           logger.error({
-            message: `Could not find the specified TypeScript compiler (resolved from ${logger.applyColor(
-              "cyan",
-              id
-            )}).
-            `,
-            file: resolved
+            message: "Could not find the specified TypeScript compiler.",
+            id: resolved
           });
           exit();
         }
-        logger.info(`Using compiler at ${logger.applyColor("cyan", id)}.`);
+        logger.info(`Using compiler at ${logger.formatId(resolved)}.`);
       }
 
       // Package name
