@@ -7,11 +7,11 @@ function awesomeTypescript(options: Options = {}): RollupPlugin {
   let plugin = new Plugin(options);
   return {
     name: "awesome typescript",
-    resolveId: plugin.resolve.bind(plugin),
-    transform(...args) {
-      return plugin.transform(this, ...args);
-    },
-    moduleParsed: plugin.moduleParsed.bind(plugin)
+    watchChange: plugin.watchChange.bind(plugin),
+    resolveId: plugin.resolveId.bind(plugin),
+    transform: plugin.transform.bind(plugin),
+    moduleParsed: plugin.moduleParsed.bind(plugin),
+    generateBundle: plugin.generateBundle.bind(plugin)
   };
 }
 

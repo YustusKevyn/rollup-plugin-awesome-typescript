@@ -112,7 +112,7 @@ export class ConfigService {
       noEmit: false,
       noResolve: false,
       importHelpers: true,
-      emitDeclarationOnly: false
+      inlineSourceMap: false
     };
   }
 }

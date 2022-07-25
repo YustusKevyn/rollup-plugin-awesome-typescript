@@ -1,5 +1,10 @@
 import type { Options } from "./types";
-import type { ModuleInfo, PluginContext } from "rollup";
+import type {
+  ModuleInfo,
+  NormalizedOutputOptions,
+  PluginContext,
+  TransformResult
+} from "rollup";
 
 import { LoggerService } from "./services/logger";
 import { CompilerService } from "./services/compiler";
@@ -7,7 +12,6 @@ import { ConfigService } from "./services/config";
 import { HelpersService } from "./services/helpers";
 
 import { Resolver } from "./core/resolver";
-import { Linker } from "./core/linker";
 import { Language } from "./core/language";
 
 export class Plugin {
@@ -18,7 +22,6 @@ export class Plugin {
   readonly config: ConfigService;
 
   readonly resolver: Resolver;
-  readonly linker: Linker;
   readonly language: Language;
 
   readonly cwd: string = process.cwd();
@@ -36,30 +39,42 @@ export class Plugin {
     this.config = new ConfigService(this, options.config);
 
     this.resolver = new Resolver(this);
-    this.linker = new Linker(this);
     this.language = new Language(this);
   }
 
-  resolve(id: string, origin?: string) {
+  watchChange() {}
+
+  resolveId(id: string, origin?: string) {
     if (id === "tslib") return this.helpers.file;
     if (!origin) return null;
 
     let file = this.resolver.resolve(id, origin)?.resolvedFileName;
     if (!file) return null;
 
-    this.logger.debug(`Resolved ${this.logger.formatId(id)} to ${file}`);
+    // this.logger.debug(`Resolved ${this.logger.formatId(id)} to ${file}`);
+    // if (resolved.extension === '.d.ts') return null;7
 
     return file;
   }
 
-  transform(context: PluginContext, code: string, file: string) {
+  transform(code: string, file: string) {
     this.language.update(file, code);
+    this.language.check(file);
 
     let output = this.language.compile(file);
+    if (!output?.code) return null;
 
-    this.language.check(file);
-    if (output) return output.source;
+    let result: TransformResult = {
+      code: output.code,
+      map: output.map ? JSON.parse(output.map) : { mappings: "" }
+    };
+    return result;
   }
 
   moduleParsed(info: ModuleInfo) {}
+
+  generateBundle(options: NormalizedOutputOptions) {
+    // Declarations
+    // Build info
+  }
 }

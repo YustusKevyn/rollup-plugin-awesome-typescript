@@ -13,6 +13,7 @@ import {
   createLanguageService,
   ScriptSnapshot
 } from "typescript";
+import { getReferencedFiles } from "./test";
 
 interface Script {
   version: number;
@@ -22,8 +23,10 @@ interface Script {
 }
 
 interface Output {
-  declarations?: string;
-  source: string;
+  code?: string;
+  map?: string;
+  declaration?: string;
+  declarationMap?: string;
 }
 
 export class Language {
@@ -94,22 +97,35 @@ export class Language {
     if (!script) return null;
     if (script.output) return script.output;
 
-    let result = this.service.getEmitOutput(file),
-      output: Partial<Output> = {};
+    console.log(file);
+
+    // let p = this.service.getProgram()!;
+    // console.log(
+    //   file,
+    //   getReferencedFiles(p, p.getSourceFile(file)!, (p) => p)
+    // );
+
+    let result = this.service.getEmitOutput(file);
+    if (result.emitSkipped) return null;
+
+    let output: Partial<Output> = {};
     for (let file of result.outputFiles) {
-      if (file.name.endsWith(".js")) output.source = file.text;
-      else if (file.name.endsWith(".dts")) output.declarations = file.text;
+      if (file.name.endsWith(".js")) output.code = file.text;
+      else if (file.name.endsWith(".js.map")) output.map = file.text;
+      else if (file.name.endsWith(".d.ts")) output.declaration = file.text;
+      else if (file.name.endsWith(".d.ts.map"))
+        output.declarationMap = file.text;
     }
     return output as Output;
   }
 
   check(file: string) {
     let script = this.get(file) ?? this.add(file);
-    if (!file) return null;
+    if (!script) return null;
+    if (script.diagnostics) return script.diagnostics;
 
     let diagnostics = this.getDiagnostics(file);
     if (!diagnostics) return null;
-
     this.plugin.logger.diagnostics.print(diagnostics);
   }
 
