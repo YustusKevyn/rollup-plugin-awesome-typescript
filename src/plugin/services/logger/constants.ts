@@ -1,9 +1,8 @@
 export enum Level {
-  Error = 0,
-  Warn = 1,
-  Success = 2,
-  Info = 3,
-  Debug = 4
+  Error,
+  Warn,
+  Info,
+  Debug
 }
 
 export const colors = {
