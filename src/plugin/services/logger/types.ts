@@ -1,13 +1,7 @@
-import { backgrounds, colors, modes } from "./constants";
-
-export type Mode = keyof typeof modes;
-export type Color = keyof typeof colors;
-export type Background = keyof typeof backgrounds;
-
 export interface Properties {
-  message: string;
   prefix?: string;
-  file?: string;
+  message: string;
+  location?: string;
   position?: Position;
   snippet?: string | string[];
 }

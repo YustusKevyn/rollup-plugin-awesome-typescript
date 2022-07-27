@@ -1,11 +1,15 @@
 import type { Options } from "./types";
 
+// import { Program } from "./program";
+
 import { Logger, LogLevel } from "./services/logger";
 import { Compiler } from "./services/compiler";
 import { Helpers } from "./services/helpers";
 import { Config } from "./services/config";
-import { Graph } from "./services/graph";
-import { Program } from "./services/program";
+import { Resolver } from "./services/resolver";
+
+console.clear();
+console.log(new Date().getTime());
 
 export class Plugin {
   readonly cwd: string = process.cwd();
@@ -16,9 +20,9 @@ export class Plugin {
   readonly compiler: Compiler;
   readonly helpers: Helpers;
   readonly config: Config;
+  readonly resolver: Resolver;
 
-  readonly graph: Graph;
-  readonly program: Program;
+  // readonly program: Program;
 
   constructor(options: Options) {
     if (options.cwd) this.cwd = options.cwd;
@@ -30,10 +34,25 @@ export class Plugin {
     this.compiler = new Compiler(this, options.compiler ?? "typescript");
     this.helpers = new Helpers(this, options.helpers ?? "tslib");
     this.config = new Config(this, options.config ?? "tsconfig.json");
+    this.resolver = new Resolver(this);
 
-    this.graph = new Graph(this);
-    this.program = new Program(this);
+    // this.program = new Program(this);
   }
+
+  resolveId(id: string, origin: string) {
+    if (id === "tslib") return this.helpers.location;
+    if (!origin) return null;
+
+    let location = this.resolver.resolve(id, origin);
+    if (!location) return null;
+
+    // this.logger.debug(`Resolved ${this.logger.formatId(id)} to ${file}`);
+    // if (resolved.extension === '.d.ts') return null;
+
+    return location;
+  }
+
+  transform(id: string, source: string) {}
 
   /**
    * WORKFLOW:
