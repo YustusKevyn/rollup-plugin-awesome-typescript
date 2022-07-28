@@ -3,7 +3,7 @@ import type { ModuleResolutionCache, ModuleResolutionHost } from "typescript";
 
 export class Resolver {
   private host: ModuleResolutionHost;
-  private cache: ModuleResolutionCache;
+  readonly cache: ModuleResolutionCache;
 
   constructor(private plugin: Plugin) {
     this.host = this.createHost();
@@ -28,15 +28,14 @@ export class Resolver {
       readFile: sys.readFile,
       directoryExists: sys.directoryExists,
       getDirectories: sys.getDirectories,
-      useCaseSensitiveFileNames: sys.useCaseSensitiveFileNames
+      useCaseSensitiveFileNames: () => sys.useCaseSensitiveFileNames
     };
   }
 
   private createCache() {
-    let compiler = this.plugin.compiler.instance;
-    return compiler.createModuleResolutionCache(
+    return this.plugin.compiler.instance.createModuleResolutionCache(
       this.plugin.cwd,
-      (path) => (compiler.sys.useCaseSensitiveFileNames ? path : path.toLowerCase()),
+      this.plugin.compiler.getCanonicalFileName,
       this.plugin.config.options
     );
   }

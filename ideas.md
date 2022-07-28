@@ -1,3 +1,6 @@
+On every cycle:
+Create an empty set of changed, processed and checked files
+
 1. Update watched files
    - Remove dead files from program
    - Remember watched file changes
@@ -12,8 +15,9 @@
       - Do not save output
       - Print diagnostics
 4. Generate bundle
-   1. Processed watched and not yet transformed files
+   1. Processe watched and not yet transformed files
       - Update source file (updateSourceFile)
       - Update program
-   2. Typecheck dependants of all processed files
-   3. Emit declarations and declaration maps
+   2. Typecheck dependants of all processed files (that haven't been checked before)
+   3. Add all dependants to watched files
+   4. Emit declarations and declaration maps

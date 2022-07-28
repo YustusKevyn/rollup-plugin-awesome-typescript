@@ -1,12 +1,11 @@
 import type { Options } from "./types";
 
-// import { Program } from "./program";
-
 import { Logger, LogLevel } from "./services/logger";
 import { Compiler } from "./services/compiler";
 import { Helpers } from "./services/helpers";
 import { Config } from "./services/config";
 import { Resolver } from "./services/resolver";
+import { Program } from "./services/program";
 
 console.clear();
 console.log(new Date().getTime());
@@ -22,7 +21,7 @@ export class Plugin {
   readonly config: Config;
   readonly resolver: Resolver;
 
-  // readonly program: Program;
+  readonly program: Program;
 
   constructor(options: Options) {
     if (options.cwd) this.cwd = options.cwd;
@@ -36,20 +35,26 @@ export class Plugin {
     this.config = new Config(this, options.config ?? "tsconfig.json");
     this.resolver = new Resolver(this);
 
-    // this.program = new Program(this);
+    this.program = new Program(this);
+  }
+
+  buildStart() {
+    this.compiler.log();
+    this.helpers.log();
+    this.config.log();
   }
 
   resolveId(id: string, origin: string) {
-    if (id === "tslib") return this.helpers.location;
+    if (id === "tslib") return this.helpers.meta.path;
     if (!origin) return null;
 
-    let location = this.resolver.resolve(id, origin);
-    if (!location) return null;
+    let path = this.resolver.resolve(id, origin);
+    if (!path) return null;
 
-    // this.logger.debug(`Resolved ${this.logger.formatId(id)} to ${file}`);
+    // this.logger.debug(`Resolved ${this.logger.formatPath(id)} to ${file}`);
     // if (resolved.extension === '.d.ts') return null;
 
-    return location;
+    return path;
   }
 
   transform(id: string, source: string) {}

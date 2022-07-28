@@ -3,83 +3,71 @@ import type typescript from "typescript";
 
 import { lt } from "semver";
 import { exit } from "../util/process";
-import { isRelative } from "../util/path";
-import { isAbsolute, resolve } from "path";
+import { apply } from "../util/ansi";
+import { isPath, isRelative } from "../util/path";
+import { resolve } from "path";
+
+interface Meta {
+  path: string;
+  name?: string;
+  version?: string;
+  supported?: true;
+}
 
 export class Compiler {
-  readonly location: string;
+  readonly meta: Meta;
   readonly instance: typeof typescript;
 
   constructor(private plugin: Plugin, input: string) {
-    this.location = this.find(input);
-    this.instance = require(this.location);
+    this.meta = this.find(input);
+    this.instance = require(this.meta.path);
   }
 
-  find(input: string) {
+  getCanonicalFileName = (path: string) => (this.instance.sys.useCaseSensitiveFileNames ? path : path.toLowerCase());
+
+  log() {
     let logger = this.plugin.logger,
-      location: string;
+      message = "Using compiler ";
 
-    // Custom
-    if (input !== "typescript") {
-      // Absolute path
-      if (isAbsolute(input)) {
-        try {
-          location = require(input);
-        } catch {
-          logger.error("Could not find the specified compiler.");
-          exit();
-        }
-        logger.info(`Using compiler at ${logger.formatPath(input)}`);
-      }
+    if (this.meta.name) {
+      message += apply(this.meta.name, "yellow");
+      if (this.meta.version) message += " v" + this.meta.version;
+    } else message += "at " + logger.formatPath(this.meta.path);
 
-      // Relative path
-      if (isRelative(input)) {
-        let resolved = resolve(this.plugin.cwd, input);
-        try {
-          location = require.resolve(resolved);
-        } catch {
-          logger.error("Could not find the specified compiler.");
-          exit();
-        }
-        logger.info(`Using compiler at ${logger.formatPath(resolved)}`);
-      }
+    if (this.meta.supported) logger.info(message);
+    else logger.info({ message, description: "Note: This compiler may not be compatible with awesome-typescript" });
+  }
 
-      // Package name
-      else {
-        try {
-          location = require.resolve(input);
-        } catch {
-          logger.error(`Could not find the specified compiler. Check if "${input}" is installed correctly.`);
-          exit();
-        }
-        logger.info(`Using compiler "${input}"`);
-      }
+  private find(input: string): Meta {
+    let logger = this.plugin.logger;
+    if (isRelative(input)) input = resolve(input, this.plugin.cwd);
 
-      logger.warn("The specified compiler may not be compatible with awesome-typescript.");
+    // Path
+    let path: string;
+    try {
+      path = require.resolve(input);
+    } catch {
+      if (isPath(input)) logger.error({ message: "Could not find the specified compiler.", path: input });
+      logger.error({ message: `Could not find the specified compiler ${apply(input, "yellow")}.` });
+      exit();
     }
 
-    // Default
-    else {
-      let config;
-      try {
-        config = require("typescript/package.json");
-        location = require.resolve("typescript");
-      } catch {
-        logger.error("Could not find TypeScript. Check if it is correctly installed.");
-        exit();
-      }
-
-      // Version
-      if (typeof config.version !== "string" || lt(config.version, "4.0.0")) {
-        logger.error(
-          "This version of TypeScript is not compatible with awesome-typescript. Please upgrade to the latest release."
-        );
-        exit();
-      }
-
-      logger.info(`Using TypeScript v${config.version}`);
+    // Config
+    let config;
+    try {
+      config = require(input + "/package.json");
+    } catch {
+      return { path };
     }
 
-    return location;
+    let { name, version } = config;
+    if (name !== "typescript") return { path, name, version };
+    if (typeof version !== "string" || lt(version, "4.0.0")) {
+      logger.error(
+        "This version of TypeScript is not compatible with awesome-typescript. Please upgrade to the latest release."
+      );
+      exit();
+    }
+    return { path, name, version, supported: true };
   }
 }

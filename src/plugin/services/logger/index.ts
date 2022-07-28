@@ -29,7 +29,7 @@ export class Logger {
     let final = apply(" ERROR ", "brightWhite", "bgRed", "bold");
     if (props.prefix) final += apply(" " + props.prefix + " ", "bgGrey", "white");
     final += " " + apply(props.message, "red", "bold");
-    final += this.formatBody(props, 8);
+    final += this.formatBody(props, props.indentation ?? 8);
     console.log(final);
   }
 
@@ -40,7 +40,7 @@ export class Logger {
     let final = apply(" WARN ", "brightWhite", "bgYellow", "bold");
     if (props.prefix) final += apply(" " + props.prefix + " ", "bgGrey", "white");
     final += " " + apply(props.message, "yellow", "bold");
-    final += this.formatBody(props, 7);
+    final += this.formatBody(props, props.indentation ?? 7);
     console.log(final);
   }
 
@@ -48,10 +48,10 @@ export class Logger {
     if (this.level < LogLevel.Info) return;
     if (typeof props === "string") props = { message: props };
 
-    let final = "";
+    let final = " • ";
     if (props.prefix) final += apply(props.prefix + " ", "grey");
     final += props.message;
-    final += this.formatBody(props);
+    final += this.formatBody(props, props.indentation ?? 3);
     console.log(final);
   }
 
@@ -62,7 +62,7 @@ export class Logger {
     let final = "";
     if (props.prefix) final += apply(props.prefix + " ", "grey");
     final += props.message;
-    final += this.formatBody(props);
+    final += this.formatBody(props, props.indentation ?? 0);
     console.log(apply(final, "dim"));
   }
 
@@ -70,8 +70,8 @@ export class Logger {
     return apply(relative(this.plugin.cwd, path), "cyan", "underline");
   }
 
-  private formatLocation(location: string, position?: Position) {
-    let final = "at " + this.formatPath(location);
+  private formatLocation(path: string, position?: Position) {
+    let final = "at " + this.formatPath(path);
     if (position) {
       final += ":" + apply(position.line, "yellow");
       final += ":" + apply(position.character, "yellow");
@@ -79,12 +79,18 @@ export class Logger {
     return final;
   }
 
-  private formatBody(props: Properties, indentation: number = 0) {
+  private formatBody(props: Properties, indentation: number) {
     let final = "",
       next = this.newLine + " ".repeat(indentation);
 
     // Location
-    if (props.location) final += next + this.formatLocation(props.location, props.position);
+    if (props.path) final += next + this.formatLocation(props.path, props.position);
+
+    // Description
+    if (props.description) {
+      let description = typeof props.description === "string" ? props.description.split("\n") : props.description;
+      final += next + apply(description.join(next), "grey");
+    }
 
     // Snippet
     if (props.snippet) {

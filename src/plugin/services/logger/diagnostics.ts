@@ -29,7 +29,7 @@ export class Diagnostics {
 
     // File
     if (diagnostic.file) {
-      props.location = diagnostic.file.fileName;
+      props.path = diagnostic.file.fileName;
       props.position = compiler.getLineAndCharacterOfPosition(diagnostic.file, diagnostic.start!);
       props.snippet = this.getSnippet(diagnostic.file, diagnostic.start!, diagnostic.length!);
     }

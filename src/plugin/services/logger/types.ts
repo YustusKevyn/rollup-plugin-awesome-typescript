@@ -1,9 +1,11 @@
 export interface Properties {
   prefix?: string;
   message: string;
-  location?: string;
+  description?: string | string[];
+  path?: string;
   position?: Position;
   snippet?: string | string[];
+  indentation?: number;
 }
 
 export interface Position {

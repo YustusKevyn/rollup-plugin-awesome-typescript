@@ -2,71 +2,63 @@ import type { Plugin } from "..";
 import type { CompilerOptions, ParsedCommandLine } from "typescript";
 
 import { exit } from "../util/process";
-import { isRelative } from "../util/path";
-import { dirname, isAbsolute, join, resolve } from "path";
+import { apply } from "../util/ansi";
+import { isPath, isRelative } from "../util/path";
+import { dirname, join, resolve } from "path";
 
 export class Config {
-  readonly location: string;
+  readonly path: string;
   readonly options: CompilerOptions;
 
   constructor(private plugin: Plugin, input: string) {
-    this.location = this.find(input);
+    this.path = this.find(input);
 
-    let source = this.read(this.location),
-      config = this.parse(this.location, source);
+    let source = this.read(this.path),
+      config = this.parse(this.path, source);
     this.options = this.normalize(config).options;
+  }
+
+  log() {
+    let logger = this.plugin.logger;
+    logger.info(`Using configuration at ${logger.formatPath(this.path)}`);
   }
 
   private find(input: string) {
     let compiler = this.plugin.compiler.instance,
-      logger = this.plugin.logger,
-      location: string;
+      logger = this.plugin.logger;
 
-    // Absolute path
-    if (isAbsolute(input)) {
-      location = input;
-      if (!compiler.sys.fileExists(location)) {
-        logger.error({ message: "Configuration file does not exist.", location });
+    // Path
+    if (isPath(input)) {
+      let path = isRelative(input) ? resolve(this.plugin.cwd, input) : input;
+      if (!compiler.sys.fileExists(path)) {
+        logger.error({ message: "Configuration file does not exists.", path: path });
         exit();
       }
-    }
-
-    // Relative path
-    if (isRelative(input)) {
-      location = resolve(this.plugin.cwd, input);
-      if (!compiler.sys.fileExists(location)) {
-        logger.error({ message: "Configuration file does not exists.", location });
-        exit();
-      }
+      return path;
     }
 
     // Filename
     else {
-      let dir = this.plugin.cwd;
-      while (true) {
-        let joined = join(dir, input);
-        if (compiler.sys.fileExists(joined)) {
-          location = joined;
-          break;
-        }
+      let dir = this.plugin.cwd,
+        parent = dirname(dir);
 
-        let parent = dirname(dir);
-        if (parent === dir) {
-          logger.error(`Configuration file with name "${input}" does not exist in directory tree.`);
-          exit();
-        }
+      while (dir !== parent) {
+        let path = join(dir, input);
+        if (compiler.sys.fileExists(path)) return path;
+
         dir = parent;
+        parent = dirname(dir);
       }
-    }
 
-    logger.info(`Using configuration at ${logger.formatPath(location)}.`);
-    return location;
+      logger.error(`Configuration file with name ${apply(input, "yellow")} does not exist in directory tree.`);
+      exit();
+    }
   }
 
-  private read(location: string) {
+  private read(path: string) {
     let logger = this.plugin.logger,
       compiler = this.plugin.compiler.instance,
-      data = compiler.readConfigFile(location, compiler.sys.readFile);
+      data = compiler.readConfigFile(path, compiler.sys.readFile);
 
     if (data.error) {
       logger.diagnostics.print(data.error);
@@ -75,10 +67,10 @@ export class Config {
     return data.config;
   }
 
-  private parse(location: string, source: string) {
+  private parse(path: string, source: string) {
     let logger = this.plugin.logger,
       compiler = this.plugin.compiler.instance,
-      result = compiler.parseJsonConfigFileContent(source, compiler.sys, this.plugin.context ?? dirname(location));
+      result = compiler.parseJsonConfigFileContent(source, compiler.sys, this.plugin.context ?? dirname(path));
 
     if (result.errors.length) {
       logger.diagnostics.print(result.errors);

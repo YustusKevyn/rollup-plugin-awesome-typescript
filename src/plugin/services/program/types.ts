@@ -1,21 +1,13 @@
-import type { IScriptSnapshot as Snapshot } from "typescript";
+import type { IScriptSnapshot as Snapshot, ScriptKind as Kind, SourceFile as Source } from "typescript";
 
 export interface File {
-  script?: Script;
-  output?: Output;
+  path: string;
+  input?: Input;
 }
 
-export interface Script {
+export interface Input {
+  kind: Kind;
+  source: Source;
   version: number;
   snapshot: Snapshot;
-}
-
-// DO NOT SAVE DIAGNOSTICS!!!
-
-export interface Output {
-  version: number;
-  code?: string;
-  codeMap?: string;
-  declaration?: string;
-  declarationMap?: string;
 }
