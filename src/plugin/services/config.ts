@@ -7,20 +7,22 @@ import { isPath, isRelative } from "../util/path";
 import { dirname, join, resolve } from "path";
 
 export class Config {
-  readonly path: string;
-  readonly options: CompilerOptions;
+  public path: string;
+  public options: CompilerOptions;
 
   constructor(private plugin: Plugin, input: string) {
     this.path = this.find(input);
-
-    let source = this.read(this.path),
-      config = this.parse(this.path, source);
-    this.options = this.normalize(config).options;
+    this.options = this.load(this.path).options;
   }
 
-  log() {
+  public log() {
     let logger = this.plugin.logger;
     logger.info(`Using configuration at ${logger.formatPath(this.path)}`);
+  }
+
+  public update() {
+    let config = this.load(this.path);
+    this.options = config.options;
   }
 
   private find(input: string) {
@@ -55,60 +57,30 @@ export class Config {
     }
   }
 
-  private read(path: string) {
+  private load(path: string) {
     let logger = this.plugin.logger,
-      compiler = this.plugin.compiler.instance,
-      data = compiler.readConfigFile(path, compiler.sys.readFile);
+      compiler = this.plugin.compiler.instance;
 
+    // Read
+    let data = compiler.readConfigFile(path, compiler.sys.readFile);
     if (data.error) {
       logger.diagnostics.print(data.error);
       exit();
     }
-    return data.config;
-  }
 
-  private parse(path: string, source: string) {
-    let logger = this.plugin.logger,
-      compiler = this.plugin.compiler.instance,
-      result = compiler.parseJsonConfigFileContent(source, compiler.sys, this.plugin.context ?? dirname(path));
-
-    if (result.errors.length) {
-      logger.diagnostics.print(result.errors);
+    // Parse
+    let config = compiler.parseJsonConfigFileContent(data, compiler.sys, this.plugin.context ?? dirname(path));
+    if (config.errors.length) {
+      logger.diagnostics.print(config.errors);
       exit();
     }
-    return result;
-  }
 
-  private normalize(config: ParsedCommandLine) {
-    return {
-      ...config,
-      options: this.normalizeOptions(config.options)
-    };
-  }
-
-  private normalizeOptions(options: CompilerOptions): CompilerOptions {
-    let compiler = this.plugin.compiler.instance;
-
-    // FORCE ESNEXT?
-
-    // Module
-    // let modules = compiler.ModuleKind;
-    // if (!options.module) options.module = modules.ESNext;
-    // else if (![modules.ES2015, modules.ES2020, modules.ES2022, modules.ESNext].includes(options.module)) {
-    //   this.plugin.logger.error(
-    //     `Module kind "${
-    //       compiler.ModuleKind[options.module]
-    //     }" is incompatible with rollup. Use one of "ES2015", "ES2020", "ES2022" or "ESNext".`
-    //   );
-    //   exit();
-    // }
-
-    return {
-      ...options,
-      noEmit: false,
-      noResolve: false,
-      importHelpers: true,
-      inlineSourceMap: false
-    };
+    // Normalize
+    let options = config.options;
+    options.noEmit = false;
+    options.noResolve = false;
+    options.importHelpers = true;
+    options.inlineSourceMap = false;
+    return config;
   }
 }

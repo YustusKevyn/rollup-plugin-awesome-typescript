@@ -22,7 +22,7 @@ export class Logger {
     this.diagnostics = new Diagnostics(this, plugin);
   }
 
-  error(props: Properties | string) {
+  public error(props: Properties | string) {
     if (this.level < LogLevel.Error) return;
     if (typeof props === "string") props = { message: props };
 
@@ -33,7 +33,7 @@ export class Logger {
     console.log(final);
   }
 
-  warn(props: Properties | string) {
+  public warn(props: Properties | string) {
     if (this.level < LogLevel.Warn) return;
     if (typeof props === "string") props = { message: props };
 
@@ -44,7 +44,7 @@ export class Logger {
     console.log(final);
   }
 
-  info(props: Properties | string) {
+  public info(props: Properties | string) {
     if (this.level < LogLevel.Info) return;
     if (typeof props === "string") props = { message: props };
 
@@ -55,7 +55,7 @@ export class Logger {
     console.log(final);
   }
 
-  debug(props: Properties | string) {
+  public debug(props: Properties | string) {
     if (this.level < LogLevel.Debug) return;
     if (typeof props === "string") props = { message: props };
 
@@ -66,7 +66,7 @@ export class Logger {
     console.log(apply(final, "dim"));
   }
 
-  formatPath(path: string) {
+  public formatPath(path: string) {
     return apply(relative(this.plugin.cwd, path), "cyan", "underline");
   }
 

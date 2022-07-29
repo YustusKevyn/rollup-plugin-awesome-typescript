@@ -1,8 +1,8 @@
 import type { Plugin } from "..";
-import type { ModuleResolutionCache, ModuleResolutionHost } from "typescript";
+import type { Extension, ModuleResolutionCache, ModuleResolutionHost } from "typescript";
 
 export class Resolver {
-  private host: ModuleResolutionHost;
+  readonly host: ModuleResolutionHost;
   readonly cache: ModuleResolutionCache;
 
   constructor(private plugin: Plugin) {
@@ -10,7 +10,7 @@ export class Resolver {
     this.cache = this.createCache();
   }
 
-  resolve(id: string, origin: string) {
+  public resolve(id: string, origin: string) {
     return this.plugin.compiler.instance.nodeModuleNameResolver(
       id,
       origin,

@@ -4,12 +4,11 @@ import type { Properties } from "./types";
 import type { Diagnostic, SourceFile } from "typescript";
 
 import { apply } from "../../util/ansi";
-import { lpad } from "../../util/string";
 
 export class Diagnostics {
   constructor(private logger: Logger, private plugin: Plugin) {}
 
-  print(diagnostics: Diagnostic | Diagnostic[]) {
+  public print(diagnostics: Diagnostic | Diagnostic[]) {
     let compiler = this.plugin.compiler.instance;
     if (!Array.isArray(diagnostics)) diagnostics = [diagnostics];
     for (let diagnostic of diagnostics) {
@@ -63,7 +62,7 @@ export class Diagnostics {
       let lineStart = compiler.getPositionOfLineAndCharacter(source, i, 0),
         lineEnd = i === lastLine ? source.text.length : compiler.getPositionOfLineAndCharacter(source, i + 1, 0),
         lineContent = source.text.slice(lineStart, lineEnd).trimEnd(),
-        final = apply(lpad((i + 1).toString(), gutterWidth) + " │ ", "grey") + " ";
+        final = apply((i + 1).toString().padStart(gutterWidth) + " │ ", "grey") + " ";
 
       if (i < errorStart.line || i > errorEnd.line) final += apply(lineContent, "dim");
       else {

@@ -5,40 +5,44 @@ import { lt } from "semver";
 import { exit } from "../util/process";
 import { apply } from "../util/ansi";
 import { isPath, isRelative } from "../util/path";
-import { resolve } from "path";
-
-interface Meta {
-  path: string;
-  name?: string;
-  version?: string;
-  supported?: true;
-}
+import { join, resolve } from "path";
 
 export class Compiler {
-  readonly meta: Meta;
+  readonly path: string;
   readonly instance: typeof typescript;
+  readonly supported: boolean = false;
+
+  readonly name?: string;
+  readonly version?: string;
 
   constructor(private plugin: Plugin, input: string) {
-    this.meta = this.find(input);
-    this.instance = require(this.meta.path);
+    let [path, name, version, supported] = this.find(input);
+
+    this.path = path;
+    this.instance = require(path);
+    if (name) this.name = name;
+    if (version) this.version = version;
+    if (supported) this.supported = true;
   }
 
-  getCanonicalFileName = (path: string) => (this.instance.sys.useCaseSensitiveFileNames ? path : path.toLowerCase());
+  public getCanonicalFileName = (path: string) => {
+    return this.instance.sys.useCaseSensitiveFileNames ? path : path.toLowerCase();
+  };
 
-  log() {
+  public log() {
     let logger = this.plugin.logger,
       message = "Using compiler ";
 
-    if (this.meta.name) {
-      message += apply(this.meta.name, "yellow");
-      if (this.meta.version) message += " v" + this.meta.version;
-    } else message += "at " + logger.formatPath(this.meta.path);
+    if (this.name) {
+      message += apply(this.name, "yellow");
+      if (this.version) message += " v" + this.version;
+    } else message += "at " + logger.formatPath(this.path);
 
-    if (this.meta.supported) logger.info(message);
+    if (this.supported) logger.info(message);
     else logger.info({ message, description: "Note: This compiler may not be compatible with awesome-typescript" });
   }
 
-  private find(input: string): Meta {
+  private find(input: string): [path: string, name?: string, version?: string, supported?: boolean] {
     let logger = this.plugin.logger;
     if (isRelative(input)) input = resolve(input, this.plugin.cwd);
 
@@ -55,19 +59,19 @@ export class Compiler {
     // Config
     let config;
     try {
-      config = require(input + "/package.json");
+      config = require(join(input, "package.json"));
     } catch {
-      return { path };
+      return [path];
     }
 
     let { name, version } = config;
-    if (name !== "typescript") return { path, name, version };
-    if (typeof version !== "string" || lt(version, "4.0.0")) {
+    if (name !== "typescript") return [path, name, version];
+    if (typeof version !== "string" || lt(version, "4.7.0")) {
       logger.error(
         "This version of TypeScript is not compatible with awesome-typescript. Please upgrade to the latest release."
       );
       exit();
     }
-    return { path, name, version, supported: true };
+    return [path, name, version, true];
   }
 }

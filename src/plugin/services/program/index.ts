@@ -1,62 +1,55 @@
 import type { Plugin } from "../..";
 import type { File } from "./types";
-import type { CompilerHost as Host, Program as Instance, SourceFile } from "typescript";
+import type { CompilerHost, EmitAndSemanticDiagnosticsBuilderProgram } from "typescript";
 
+import { existsFile } from "../../util/fs";
 import { readFileSync } from "fs";
 
 export class Program {
   private files: Map<string, File> = new Map();
 
-  private host: Host;
-  private instance: Instance;
+  private host: CompilerHost;
+  private instance: EmitAndSemanticDiagnosticsBuilderProgram;
 
   constructor(private plugin: Plugin) {
     this.host = this.createHost();
-  }
-
-  private synchronize() {
-    let compiler = this.plugin.compiler.instance;
-
-    let a: SourceFile;
-    a.version;
-
-    // files = Object.keys(this.files);
-  }
-
-  private getFile(id: string) {
-    return this.files.get(id) ?? this.createFile(id);
-  }
-
-  private getInput(id: string) {
-    return this.getFile(id).input ?? this.createInput(id);
+    this.instance = this.createProgram();
   }
 
   private createFile(id: string) {
-    let file: File = { path: id };
-    this.files.set(id, file);
+    let logger = this.plugin.logger,
+      compiler = this.plugin.compiler.instance,
+      path = compiler.toPath(id, this.plugin.cwd, this.plugin.compiler.getCanonicalFileName);
+
+    if (!existsFile(path)) return null;
+
+    let data: string;
+    try {
+      data = readFileSync(path, "utf-8");
+    } catch {
+      logger.error({ message: "Failed to read file.", path });
+      return null;
+    }
+
+    // ---- TEMP ----
+    let kind = compiler.ScriptKind.TS,
+      target = compiler.ScriptTarget.ESNext;
+    // --------------
+
+    let file: File = {
+      input: {
+        kind,
+        target,
+        source: compiler.createSourceFile(id, data, target, true, kind),
+        version: new Date().getTime()
+      }
+    };
+
+    this.files.set(path, file);
     return file;
   }
 
-  private createInput(id: string, data?: string) {
-    let file = this.getFile(id);
-    if (!data) data = readFileSync(file.path, "utf-8");
-
-    let compiler = this.plugin.compiler.instance;
-
-    // REPLACE THIS!!
-    let kind = compiler.ScriptKind.TS,
-      target = compiler.ScriptTarget.ESNext;
-    // ---
-
-    return (file.input = {
-      kind,
-      source: compiler.createSourceFile(id, data, target, false, kind),
-      version: 0,
-      snapshot: this.plugin.compiler.instance.ScriptSnapshot.fromString(data)
-    });
-  }
-
-  private createHost(): Host {
+  private createHost(): CompilerHost {
     let compiler = this.plugin.compiler.instance;
     return {
       fileExists: compiler.sys.fileExists,
@@ -64,26 +57,27 @@ export class Program {
       getCurrentDirectory: () => this.plugin.cwd,
       getDefaultLibFileName: compiler.getDefaultLibFilePath,
       getNewLine: () => compiler.sys.newLine,
-      getSourceFile: (id) => this.getInput(id).source,
+      getSourceFile,
+      getSourceFileByPath,
       readFile: compiler.sys.readFile,
       useCaseSensitiveFileNames: () => compiler.sys.useCaseSensitiveFileNames,
-      writeFile: compiler.sys.writeFile,
+      writeFile: (...args) => console.log(args),
       createHash: compiler.sys.createHash,
       directoryExists: compiler.sys.directoryExists,
       getDirectories: compiler.sys.getDirectories,
-      getModuleResolutionCache: () => this.plugin.resolver.cache
+      getModuleResolutionCache: () => this.plugin.resolver.cache,
+      readDirectory: compiler.sys.readDirectory,
+      realpath: compiler.sys.realpath,
+      resolveModuleNames: (ids, origin) => ids.map(id => this.plugin.resolver.resolve(id, origin))
     };
   }
 
-  public updateInput(id: string, data: string) {
-    let input = this.getFile(id).input;
-    if (!input) return this.createInput(id);
-
-    let compiler = this.plugin.compiler.instance,
-      snapshot = compiler.ScriptSnapshot.fromString(data);
-    input.version++;
-    input.source = compiler.updateSourceFile(input.source, data, snapshot.getChangeRange(input.snapshot)!);
-    input.snapshot = snapshot;
-    return input;
+  private createProgram() {
+    return this.plugin.compiler.instance.createEmitAndSemanticDiagnosticsBuilderProgram(
+      Array.from(this.files.keys()),
+      this.plugin.config.options,
+      this.host,
+      this.instance
+    );
   }
 }

@@ -7,6 +7,8 @@ export function awesomeTypescript(options?: Options): RollupPlugin {
   let plugin = new Plugin(options ?? {});
   return {
     name: "awesome typescript",
-    buildStart: plugin.buildStart.bind(plugin)
+    buildStart: plugin.buildStart.bind(plugin),
+    resolveId: plugin.resolveId.bind(plugin),
+    load: plugin.load.bind(plugin)
   };
 }

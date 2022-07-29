@@ -38,37 +38,24 @@ export class Plugin {
     this.program = new Program(this);
   }
 
-  buildStart() {
+  public buildStart() {
     this.compiler.log();
     this.helpers.log();
     this.config.log();
   }
 
-  resolveId(id: string, origin: string) {
-    if (id === "tslib") return this.helpers.meta.path;
+  public resolveId(id: string, origin?: string) {
+    if (id === "tslib") return this.helpers.path;
     if (!origin) return null;
 
-    let path = this.resolver.resolve(id, origin);
-    if (!path) return null;
+    let resolved = this.resolver.resolve(id, origin);
+    if (!resolved) return null;
 
-    // this.logger.debug(`Resolved ${this.logger.formatPath(id)} to ${file}`);
-    // if (resolved.extension === '.d.ts') return null;
-
-    return path;
+    this.logger.debug(`Resolved ${this.logger.formatPath(id)} to ${resolved.resolvedFileName}`);
+    return resolved.resolvedFileName;
   }
 
-  transform(id: string, source: string) {}
+  public load(id: string) {}
 
-  /**
-   * WORKFLOW:
-   *
-   * 1. REMOVE DEAD WATCHED FILES FROM CACHE
-   * 2. RESOLVE
-   * 3. COMPILE
-   * 4. UPDATE GRAPH (RETURN DIFF)
-   * 5. TYPECHECK TRANSFORMED FILES AND DEPENDANTS
-   * 6. WATCH MISSED FILES
-   * 7. EMIT DECLARATIONS
-   * 8. REPEAT...
-   */
+  public transform(data: string, id: string) {}
 }
