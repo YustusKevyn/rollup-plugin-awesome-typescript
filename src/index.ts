@@ -16,12 +16,12 @@ export function awesomeTypescript(options?: Options): RollupPlugin {
     name: "awesome typescript",
     watchChange: (id, change) => plugin.watcher.queue(id, EventKindMap[change.event]),
     buildStart: function (options) {
-      return plugin.start(this, options);
+      return plugin.start(this);
     },
-    resolveId: function (id, origin, { isEntry }) {
-      plugin.resolve(this, id, origin, isEntry);
+    resolveId: (id, origin) => plugin.resolve(id, origin),
+    load: function (id) {
+      return plugin.process(this, id);
     },
-    load: id => plugin.process(id),
     buildEnd: () => plugin.end()
   };
 }

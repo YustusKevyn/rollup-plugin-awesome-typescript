@@ -1,5 +1,5 @@
 import type { Options, State } from "./types";
-import type { LoadResult, NormalizedInputOptions, PluginContext } from "rollup";
+import type { LoadResult, PluginContext as Context } from "rollup";
 
 import { Logger, LoggerLevel } from "./services/logger";
 import { Compiler } from "./services/compiler";
@@ -54,7 +54,7 @@ export class Plugin {
     };
   }
 
-  public start(context: PluginContext, options: NormalizedInputOptions) {
+  public start(context: Context) {
     this.compiler.log();
     this.helpers.log();
     this.config.log();
@@ -75,34 +75,39 @@ export class Plugin {
     }
   }
 
-  public resolve(context: PluginContext, id: string, origin: string | undefined, isRoot: boolean) {
+  public resolve(id: string, origin?: string) {
     if (id === "tslib") return this.helpers.path;
     if (!origin) return null;
 
-    // // Entry
-    // if (info?.isEntry && included) {
-    //   if (!this.state.entries.has(path)) {
-    //     this.state.entries.add(path);
-    //     let dependencies = this.program.getDependencies(path);
-    //     for (let dependency of dependencies) context.addWatchFile(trueCase(dependency));
-    //   }
-    // } else this.state.entries.delete(path);
-
-    // ADD ROOTS TO GRAPH!
-    // (FILES THAT ARE RESOLVED FROM AN ORIGIN NOT WITHIN TYPESCRIPT'S REACH)
+    // ADD FILES THAT ARE RESOLVED FROM AN ORIGIN NOT WITHIN TYPESCRIPT'S REACH TO ENTRIES...
 
     let path = this.resolver.resolvePath(id, origin);
     if (!path || !this.filter.includes(path)) return null;
     return trueCase(path);
   }
 
-  public process(id: string) {
-    let path = this.resolver.toPath(id);
-    if (!this.filter.includes(path)) return null;
+  public process(context: Context, id: string) {
+    let path = this.resolver.toPath(id),
+      info = context.getModuleInfo(id),
+      included = this.filter.includes(path);
 
+    // Entry
+    if (context.meta.watchMode) {
+      if (info?.isEntry && included) {
+        if (!this.state.entries.has(path)) {
+          this.state.entries.add(path);
+          let dependencies = this.program.getDependencies(path);
+          for (let dependency of dependencies) context.addWatchFile(trueCase(dependency));
+        }
+      } else this.state.entries.delete(path);
+    }
+
+    // Output
+    if (!included) return null;
     let output = this.program.getOutput(path);
     if (!output?.code) return null;
 
+    // Result
     let result: LoadResult = { code: output.code };
     if (output.codeMap) result.map = JSON.parse(output.codeMap);
     return result;

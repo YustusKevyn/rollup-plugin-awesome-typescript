@@ -50,27 +50,4 @@ declare module "typescript" {
     host: ParseConfigHost,
     extraFileExtensions: readonly FileExtensionInfo[]
   ): string[];
-
-  export interface BuilderProgram {
-    getState(): ReusableBuilderProgramState;
-  }
-
-  export interface ReusableBuilderProgramState extends BuilderState {}
-
-  export interface BuilderState {
-    /**
-     * Contains the map of ReferencedSet=Referenced files of the file if module emit is enabled
-     * Otherwise undefined
-     * Thus non undefined value indicates, module emit
-     */
-    readonly referencedMap?: BuilderState.ReadonlyManyToManyPathMap | undefined;
-  }
-
-  export namespace BuilderState {
-    export interface ReadonlyManyToManyPathMap {
-      getKeys(v: Path): ReadonlySet<Path> | undefined;
-      getValues(k: Path): ReadonlySet<Path> | undefined;
-      keys(): Iterator<Path>;
-    }
-  }
 }
