@@ -1,4 +1,4 @@
-import type { LogLevel } from "./services/logger";
+import type { LoggerLevel } from "./services/logger";
 
 export interface Options {
   cwd?: string | undefined;
@@ -10,5 +10,10 @@ export interface Options {
   compiler?: string | undefined;
 
   silent?: boolean | undefined;
-  logLevel?: LogLevel | undefined;
+  logLevel?: LoggerLevel | undefined;
+}
+
+export interface State {
+  cycle: number;
+  entries: Set<string>;
 }

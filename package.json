@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-awesome-typescript",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "author": "Yanis Morgenegg",
   "license": "MIT",
   "homepage": "https://github.com/YustusKevyn/rollup-plugin-awesome-typescript",
@@ -26,6 +26,7 @@
     "prettier": "^2.7.1",
     "rollup": "^2.77.0",
     "semver": "^7.3.7",
+    "true-case-path": "^2.2.1",
     "ts-jest": "^28.0.7",
     "ts-node": "^10.9.1",
     "tslib": "^2.4.0",

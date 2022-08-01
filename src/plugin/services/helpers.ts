@@ -8,10 +8,10 @@ import { join, resolve } from "path";
 
 export class Helpers {
   readonly path: string;
-  readonly supported: boolean = false;
 
-  readonly name?: string;
-  readonly version?: string;
+  private name?: string;
+  private version?: string;
+  private supported: boolean = false;
 
   constructor(private plugin: Plugin, input: string) {
     let [path, name, version, supported] = this.find(input);

@@ -1,19 +1,19 @@
 import type { Plugin } from "..";
 import type typescript from "typescript";
 
-import { lt } from "semver";
+import { compare, lt } from "semver";
 import { exit } from "../util/process";
 import { apply } from "../util/ansi";
 import { isPath, isRelative } from "../util/path";
 import { join, resolve } from "path";
 
 export class Compiler {
-  readonly path: string;
   readonly instance: typeof typescript;
-  readonly supported: boolean = false;
 
-  readonly name?: string;
-  readonly version?: string;
+  private path: string;
+  private name?: string;
+  private version?: string;
+  private supported: boolean = false;
 
   constructor(private plugin: Plugin, input: string) {
     let [path, name, version, supported] = this.find(input);
@@ -24,10 +24,6 @@ export class Compiler {
     if (version) this.version = version;
     if (supported) this.supported = true;
   }
-
-  public getCanonicalFileName = (path: string) => {
-    return this.instance.sys.useCaseSensitiveFileNames ? path : path.toLowerCase();
-  };
 
   public log() {
     let logger = this.plugin.logger,

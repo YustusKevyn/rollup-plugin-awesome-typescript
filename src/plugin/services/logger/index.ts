@@ -6,7 +6,7 @@ import { Diagnostics } from "./diagnostics";
 import { apply } from "../../util/ansi";
 import { relative } from "path";
 
-export enum LogLevel {
+export enum LoggerLevel {
   Error,
   Warn,
   Info,
@@ -18,23 +18,23 @@ export class Logger {
 
   readonly newLine = "\n";
 
-  constructor(private plugin: Plugin, readonly level: LogLevel) {
+  constructor(private plugin: Plugin, readonly level: LoggerLevel) {
     this.diagnostics = new Diagnostics(this, plugin);
   }
 
   public error(props: Properties | string) {
-    if (this.level < LogLevel.Error) return;
+    if (this.level < LoggerLevel.Error) return;
     if (typeof props === "string") props = { message: props };
 
-    let final = apply(" ERROR ", "brightWhite", "bgRed", "bold");
+    let final = this.newLine + apply(" ERROR ", "brightWhite", "bgRed", "bold");
     if (props.prefix) final += apply(" " + props.prefix + " ", "bgGrey", "white");
     final += " " + apply(props.message, "red", "bold");
-    final += this.formatBody(props, props.indentation ?? 8);
+    final += this.formatBody(props, props.indentation ?? 8) + this.newLine;
     console.log(final);
   }
 
   public warn(props: Properties | string) {
-    if (this.level < LogLevel.Warn) return;
+    if (this.level < LoggerLevel.Warn) return;
     if (typeof props === "string") props = { message: props };
 
     let final = apply(" WARN ", "brightWhite", "bgYellow", "bold");
@@ -45,7 +45,7 @@ export class Logger {
   }
 
   public info(props: Properties | string) {
-    if (this.level < LogLevel.Info) return;
+    if (this.level < LoggerLevel.Info) return;
     if (typeof props === "string") props = { message: props };
 
     let final = " • ";
@@ -56,7 +56,7 @@ export class Logger {
   }
 
   public debug(props: Properties | string) {
-    if (this.level < LogLevel.Debug) return;
+    if (this.level < LoggerLevel.Debug) return;
     if (typeof props === "string") props = { message: props };
 
     let final = "";
@@ -95,7 +95,7 @@ export class Logger {
     // Snippet
     if (props.snippet) {
       let snippet = typeof props.snippet === "string" ? props.snippet.split("\n") : props.snippet;
-      final += this.newLine + next + snippet.join(next) + this.newLine;
+      final += this.newLine + next + snippet.join(next);
     }
 
     return final;

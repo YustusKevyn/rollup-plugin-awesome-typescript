@@ -8,10 +8,9 @@ import { apply } from "../../util/ansi";
 export class Diagnostics {
   constructor(private logger: Logger, private plugin: Plugin) {}
 
-  public print(diagnostics: Diagnostic | Diagnostic[]) {
+  public print(diagnostics: Readonly<Diagnostic> | Readonly<Diagnostic[]>) {
     let compiler = this.plugin.compiler.instance;
-    if (!Array.isArray(diagnostics)) diagnostics = [diagnostics];
-    for (let diagnostic of diagnostics) {
+    for (let diagnostic of Array.isArray(diagnostics) ? diagnostics : [diagnostics]) {
       let props = this.getProps(diagnostic);
       if (diagnostic.category === compiler.DiagnosticCategory.Error) this.logger.error(props);
       else if (diagnostic.category === compiler.DiagnosticCategory.Warning) this.logger.warn(props);
@@ -38,13 +37,13 @@ export class Diagnostics {
 
   private getSnippet(source: SourceFile, index: number, length: number) {
     const contextLines = 2,
-      minHiddenLines = 2,
+      placeholderLines = 2,
       maxErrorLines = 8;
 
     let compiler = this.plugin.compiler.instance,
       errorStart = compiler.getLineAndCharacterOfPosition(source, index),
       errorEnd = compiler.getLineAndCharacterOfPosition(source, index + length),
-      errorLines = errorStart.line - errorEnd.line,
+      errorLines = errorEnd.line - errorStart.line + 1,
       lastLine = compiler.getLineAndCharacterOfPosition(source, source.text.length).line,
       startLine = Math.max(0, errorStart.line - contextLines),
       endLine = Math.min(lastLine, errorEnd.line + contextLines),
@@ -53,10 +52,10 @@ export class Diagnostics {
 
     if (startLine - contextLines < 0) snippet.push(apply(" ".repeat(gutterWidth) + " ┬", "grey"));
     for (let i = startLine; i <= endLine; i++) {
-      if (errorLines >= maxErrorLines && i === errorStart.line + minHiddenLines + 1) {
+      if (errorLines > maxErrorLines && i === errorStart.line + placeholderLines + 1) {
         let hidden = apply(" ".repeat(gutterWidth) + " ╎", "grey");
-        snippet = snippet.concat(new Array(minHiddenLines).fill(hidden));
-        i = errorEnd.line - minHiddenLines;
+        for (let j = 0; j < placeholderLines; j++) snippet.push(hidden);
+        i = errorEnd.line - placeholderLines;
       }
 
       let lineStart = compiler.getPositionOfLineAndCharacter(source, i, 0),
@@ -73,6 +72,8 @@ export class Diagnostics {
         final += apply(lineContent.slice(lineErrorStart, lineErrorEnd), "brightWhite", "bold", "italic");
         final += apply(lineContent.slice(lineErrorEnd), "dim");
       }
+
+      snippet.push(final);
     }
     if (endLine + contextLines > lastLine) snippet.push(apply(" ".repeat(gutterWidth) + " ┴", "grey"));
 
