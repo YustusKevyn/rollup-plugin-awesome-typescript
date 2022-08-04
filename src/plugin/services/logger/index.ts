@@ -1,12 +1,12 @@
 import type { Plugin } from "../..";
-import type { Position, Properties } from "./types";
+import type { Position, Record } from "./types";
 
 import { Diagnostics } from "./diagnostics";
 
 import { apply } from "../../util/ansi";
 import { relative } from "path";
 
-export enum LoggerLevel {
+enum Level {
   Error,
   Warn,
   Info,
@@ -17,53 +17,71 @@ export class Logger {
   readonly diagnostics: Diagnostics;
 
   readonly newLine = "\n";
+  readonly padding = "";
 
-  constructor(private plugin: Plugin, readonly level: LoggerLevel) {
+  constructor(private plugin: Plugin, readonly level: Level) {
     this.diagnostics = new Diagnostics(this, plugin);
   }
 
-  public error(props: Properties | string) {
-    if (this.level < LoggerLevel.Error) return;
-    if (typeof props === "string") props = { message: props };
+  public log(arg: string | string[], level: Level) {
+    if (this.level < level && level !== Level.Error) return;
+    if (typeof arg === "string") arg = arg.split("\n");
+    console.log(arg.join(this.newLine));
+  }
 
-    let final = this.newLine + apply(" ERROR ", "brightWhite", "bgRed", "bold");
-    if (props.prefix) final += apply(" " + props.prefix + " ", "bgGrey", "white");
-    final += " " + apply(props.message, "red", "bold");
-    final += this.formatBody(props, props.indentation ?? 8) + this.newLine;
+  public error(record: Record | string) {
+    if (typeof record === "string") record = { message: record };
+
+    let final = this.newLine;
+    final += this.formatHeader(
+      record,
+      apply(" ERROR ", "brightWhite", "bgRed", "bold"),
+      apply(record.message, "red", "bold")
+    );
+    final += this.formatBody(record, 8) + this.newLine;
     console.log(final);
   }
 
-  public warn(props: Properties | string) {
-    if (this.level < LoggerLevel.Warn) return;
-    if (typeof props === "string") props = { message: props };
+  public warn(record: Record | string) {
+    if (this.level < Level.Warn) return;
+    if (typeof record === "string") record = { message: record };
 
-    let final = apply(" WARN ", "brightWhite", "bgYellow", "bold");
-    if (props.prefix) final += apply(" " + props.prefix + " ", "bgGrey", "white");
-    final += " " + apply(props.message, "yellow", "bold");
-    final += this.formatBody(props, props.indentation ?? 7);
+    let final = this.newLine;
+    final += this.formatHeader(
+      record,
+      apply(" WARN ", "brightWhite", "bgYellow", "bold"),
+      apply(record.message, "yellow", "bold")
+    );
+    final += this.formatBody(record, 7) + this.newLine;
     console.log(final);
   }
 
-  public info(props: Properties | string) {
-    if (this.level < LoggerLevel.Info) return;
-    if (typeof props === "string") props = { message: props };
+  // public info(props: Properties | string) {
+  //   if (this.level < LoggerLevel.Info) return;
+  //   if (typeof props === "string") props = { message: props };
 
-    let final = " • ";
-    if (props.prefix) final += apply(props.prefix + " ", "grey");
-    final += props.message;
-    final += this.formatBody(props, props.indentation ?? 3);
-    console.log(final);
-  }
+  //   let final = " • ";
+  //   if (props.code) final += apply(props.code + " ", "grey");
+  //   final += props.message;
+  //   final += this.formatBody(props, props.indentation ?? 3);
+  //   console.log(final);
+  // }
 
-  public debug(props: Properties | string) {
-    if (this.level < LoggerLevel.Debug) return;
-    if (typeof props === "string") props = { message: props };
+  // public debug(props: Properties | string) {
+  //   if (this.level < LoggerLevel.Debug) return;
+  //   if (typeof props === "string") props = { message: props };
 
-    let final = "";
-    if (props.prefix) final += apply(props.prefix + " ", "grey");
-    final += props.message;
-    final += this.formatBody(props, props.indentation ?? 0);
-    console.log(apply(final, "dim"));
+  //   let final = "";
+  //   if (props.code) final += apply(props.code + " ", "grey");
+  //   final += props.message;
+  //   final += this.formatBody(props, props.indentation ?? 0);
+  //   console.log(apply(final, "dim"));
+  // }
+
+  public applyIndentation(arg: string | string[], indentation: number) {
+    if (typeof arg === "string") arg = arg.split("\n");
+    if (!indentation) return arg.join(this.newLine);
+    return arg.map(line => " ".repeat(indentation) + line).join(this.newLine);
   }
 
   public formatPath(path: string) {
@@ -73,31 +91,32 @@ export class Logger {
   private formatLocation(path: string, position?: Position) {
     let final = "at " + this.formatPath(path);
     if (position) {
-      final += ":" + apply(position.line, "yellow");
-      final += ":" + apply(position.character, "yellow");
+      final += ":" + apply(position.line + 1, "yellow");
+      final += ":" + apply(position.character + 1, "yellow");
     }
     return final;
   }
 
-  private formatBody(props: Properties, indentation: number) {
-    let final = "",
-      next = this.newLine + " ".repeat(indentation);
+  private formatHeader(record: Record, prefix: string, title: string) {
+    let final = prefix;
+    if (record.code) final += apply(" " + record.code + " ", "bgGrey", "white");
+    return final + " " + title;
+  }
 
-    // Location
-    if (props.path) final += next + this.formatLocation(props.path, props.position);
-
-    // Description
-    if (props.description) {
-      let description = typeof props.description === "string" ? props.description.split("\n") : props.description;
-      final += next + apply(description.join(next), "grey");
+  private formatBody(record: Record, indentation: number = 0) {
+    let final = [];
+    if (record.path) final.push(this.formatLocation(record.path, record.position));
+    if (record.description) {
+      let description = typeof record.description === "string" ? record.description.split("\n") : record.description;
+      final.push(...description);
     }
-
-    // Snippet
-    if (props.snippet) {
-      let snippet = typeof props.snippet === "string" ? props.snippet.split("\n") : props.snippet;
-      final += this.newLine + next + snippet.join(next);
+    if (record.snippet) {
+      let snippet = typeof record.snippet === "string" ? record.snippet.split("\n") : record.snippet;
+      final.push(this.padding, ...snippet);
     }
-
-    return final;
+    return final.length ? this.newLine + this.applyIndentation(final, indentation) : "";
   }
 }
+
+export { Level as LoggerLevel };
+export type { Record as LoggerRecord };

@@ -1,20 +1,20 @@
-import type { Options, State } from "./types";
-import type { LoadResult, PluginContext as Context } from "rollup";
+import type { Options } from "../types";
+import type { LoadResult, PluginContext } from "rollup";
 
-import { Logger, LoggerLevel } from "./services/logger";
-import { Compiler } from "./services/compiler";
-import { Helpers } from "./services/helpers";
 import { Config } from "./services/config";
+import { Compiler } from "./services/compiler";
+import { Emitter } from "./services/emitter";
 import { Filter } from "./services/filter";
+import { Helpers } from "./services/helpers";
+import { Logger, LoggerLevel } from "./services/logger";
+import { Program } from "./services/program";
 import { Resolver } from "./services/resolver";
 import { Watcher } from "./services/watcher";
-import { Program } from "./services/program";
 
+import { apply } from "./util/ansi";
 import { trueCase, normalize } from "./util/path";
 
 export class Plugin {
-  private state: State;
-
   readonly cwd: string = normalize(process.cwd());
   readonly context?: string;
 
@@ -29,13 +29,13 @@ export class Plugin {
   readonly watcher: Watcher;
 
   readonly program: Program;
+  readonly emitter: Emitter;
 
   constructor(options: Options) {
     if (options.cwd) this.cwd = normalize(options.cwd, this.cwd);
     if (options.context) this.context = normalize(options.context, this.cwd);
 
-    let logLevel = options.silent ? -1 : options.logLevel ?? LoggerLevel.Info;
-    this.logger = new Logger(this, logLevel);
+    this.logger = new Logger(this, LoggerLevel.Info);
 
     this.compiler = new Compiler(this, options.compiler ?? "typescript");
     this.helpers = new Helpers(this, options.helpers ?? "tslib");
@@ -46,64 +46,23 @@ export class Plugin {
     this.watcher = new Watcher(this);
 
     this.program = new Program(this);
-
-    // State
-    this.state = {
-      cycle: 0,
-      entries: new Set()
-    };
-  }
-
-  public start(context: Context) {
-    this.compiler.log();
-    this.helpers.log();
-    this.config.log();
-
-    this.state.cycle++;
-
-    // Incremental
-    if (this.state.cycle > 1) {
-      this.config.updateFiles();
-      this.watcher.flush();
-
-      for (let entry of this.state.entries) {
-        let dependencies = this.program.getDependencies(entry);
-        for (let dependency of dependencies) context.addWatchFile(trueCase(dependency));
-      }
-
-      console.log(context.getWatchFiles());
-    }
+    this.emitter = new Emitter(this, options);
   }
 
   public resolve(id: string, origin?: string) {
     if (id === "tslib") return this.helpers.path;
     if (!origin) return null;
 
-    // ADD FILES THAT ARE RESOLVED FROM AN ORIGIN NOT WITHIN TYPESCRIPT'S REACH TO ENTRIES...
-
     let path = this.resolver.resolvePath(id, origin);
     if (!path || !this.filter.includes(path)) return null;
     return trueCase(path);
   }
 
-  public process(context: Context, id: string) {
-    let path = this.resolver.toPath(id),
-      info = context.getModuleInfo(id),
-      included = this.filter.includes(path);
-
-    // Entry
-    if (context.meta.watchMode) {
-      if (info?.isEntry && included) {
-        if (!this.state.entries.has(path)) {
-          this.state.entries.add(path);
-          let dependencies = this.program.getDependencies(path);
-          for (let dependency of dependencies) context.addWatchFile(trueCase(dependency));
-        }
-      } else this.state.entries.delete(path);
-    }
+  public process(id: string) {
+    let path = this.resolver.toPath(id);
+    if (!this.filter.includes(path)) return null;
 
     // Output
-    if (!included) return null;
     let output = this.program.getOutput(path);
     if (!output?.code) return null;
 
@@ -113,7 +72,48 @@ export class Plugin {
     return result;
   }
 
-  public end() {
-    this.program.check();
+  public handleStart(context: PluginContext) {
+    this.logger.log(
+      [
+        this.logger.padding,
+        apply("awesome-typescript", "underline"),
+        ...this.compiler.header,
+        ...this.helpers.header,
+        ...this.config.header,
+        this.logger.padding
+      ],
+      LoggerLevel.Info
+    );
+
+    this.config.updateRootFiles();
+    this.watcher.process();
+
+    context.addWatchFile(trueCase(this.config.path));
+    for (let path of this.config.extends) context.addWatchFile(trueCase(path));
+  }
+
+  public handleEnd(context: PluginContext) {
+    let files: Set<string> = new Set();
+    for (let id of context.getModuleIds()) {
+      let path = this.resolver.toPath(id);
+      if (files.has(path) || !this.filter.includes(path)) continue;
+      files.add(path);
+
+      let queue: string[] = [path];
+      while (queue.length) {
+        let current = queue.pop()!,
+          dependencies = this.program.getDependencies(current);
+        for (let dependency of dependencies) {
+          if (files.has(dependency)) continue;
+          queue.push(dependency);
+          files.add(dependency);
+          context.addWatchFile(trueCase(dependency));
+        }
+      }
+    }
+
+    this.config.check();
+    this.program.check(files);
+    this.emitter.emit(files);
   }
 }

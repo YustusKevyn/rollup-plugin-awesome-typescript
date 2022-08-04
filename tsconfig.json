@@ -4,10 +4,9 @@
     "module": "ESNext",
     "target": "ESNext",
     "esModuleInterop": true,
-    "resolveJsonModule": true,
     "moduleResolution": "node",
     "exactOptionalPropertyTypes": true,
-    "typeRoots": ["node_modules/@types", "src/typescript.d.ts"]
+    "typeRoots": ["node_modules/@types", "types"]
   },
   "exclude": ["lib"]
 }

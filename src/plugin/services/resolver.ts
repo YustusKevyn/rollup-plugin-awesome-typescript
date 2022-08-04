@@ -51,4 +51,8 @@ export class Resolver {
       this.plugin.config.options
     );
   }
+
+  public update() {
+    this.cache.update(this.plugin.config.options);
+  }
 }

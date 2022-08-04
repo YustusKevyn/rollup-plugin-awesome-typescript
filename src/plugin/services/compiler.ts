@@ -1,7 +1,7 @@
 import type { Plugin } from "..";
 import type typescript from "typescript";
 
-import { compare, lt } from "semver";
+import { lt } from "semver";
 import { exit } from "../util/process";
 import { apply } from "../util/ansi";
 import { isPath, isRelative } from "../util/path";
@@ -25,17 +25,17 @@ export class Compiler {
     if (supported) this.supported = true;
   }
 
-  public log() {
-    let logger = this.plugin.logger,
-      message = "Using compiler ";
+  public get header() {
+    let final = [];
 
-    if (this.name) {
-      message += apply(this.name, "yellow");
-      if (this.version) message += " v" + this.version;
-    } else message += "at " + logger.formatPath(this.path);
+    let title = " • Using compiler ";
+    if (!this.name) title += "at " + this.plugin.logger.formatPath(this.path);
+    else title += apply(this.name, "yellow") + (this.version ? " v" + this.version : "");
+    final.push(title);
 
-    if (this.supported) logger.info(message);
-    else logger.info({ message, description: "Note: This compiler may not be compatible with awesome-typescript" });
+    if (!this.supported) final.push(apply("   This compiler may not be compatible with awesome-typescript", "grey"));
+
+    return final;
   }
 
   private find(input: string): [path: string, name?: string, version?: string, supported?: boolean] {

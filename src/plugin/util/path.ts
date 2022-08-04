@@ -1,4 +1,4 @@
-import { isCaseInsensitive } from "./fs";
+import { isCaseSensitive } from "./fs";
 
 import _path from "path";
 import { trueCasePathSync } from "true-case-path";
@@ -25,9 +25,13 @@ export function normalizeSlashes(path: string) {
 }
 
 export function normalizeCase(path: string) {
-  return isCaseInsensitive ? path.toLowerCase() : path;
+  return isCaseSensitive ? path : path.toLowerCase();
 }
 
+const trueCaseCache: Map<string, string> = new Map();
+
 export function trueCase(path: string) {
-  return isCaseInsensitive ? trueCasePathSync(path) : path;
+  if (isCaseSensitive) return path;
+  if (!trueCaseCache.has(path)) trueCaseCache.set(path, trueCasePathSync(path));
+  return trueCaseCache.get(path)!;
 }

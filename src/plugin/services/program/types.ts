@@ -1,17 +1,20 @@
 import type { FileKind } from ".";
-import type { SourceFile as Source } from "typescript";
+import type { SourceFile } from "typescript";
 
 export type File = MissingFile | ExistingFile;
 
-export interface MissingFile {
-  kind: FileKind.Missing;
+interface GenericFile {
+  kind: FileKind;
   version: number;
 }
 
-export interface ExistingFile {
+export interface MissingFile extends GenericFile {
+  kind: FileKind.Missing;
+}
+
+export interface ExistingFile extends GenericFile {
   kind: FileKind.Existing;
-  version: number;
-  source: Source;
+  source: SourceFile;
   build?: Build;
 }
 

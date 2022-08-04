@@ -1,10 +1,18 @@
 import { statSync } from "fs";
 
-export const isCaseInsensitive = fileExists(swapCase(__filename));
+export const isCaseSensitive = !fileExists(swapCase(__filename));
 
 export function fileExists(path: string) {
   try {
     return statSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
+export function directoryExists(path: string) {
+  try {
+    return statSync(path).isDirectory();
   } catch {
     return false;
   }

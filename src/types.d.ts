@@ -1,4 +1,4 @@
-import type { LoggerLevel } from "./services/logger";
+export function awesomeTypescript(options?: Options): any;
 
 export interface Options {
   cwd?: string | undefined;
@@ -9,11 +9,5 @@ export interface Options {
   helpers?: string | undefined;
   compiler?: string | undefined;
 
-  silent?: boolean | undefined;
-  logLevel?: LoggerLevel | undefined;
-}
-
-export interface State {
-  cycle: number;
-  entries: Set<string>;
+  declarations?: string | undefined;
 }

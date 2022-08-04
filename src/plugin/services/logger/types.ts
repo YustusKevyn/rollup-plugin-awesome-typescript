@@ -1,11 +1,10 @@
-export interface Properties {
-  prefix?: string;
+export interface Record {
+  code?: string;
   message: string;
-  description?: string | string[];
   path?: string;
   position?: Position;
+  description?: string | string[];
   snippet?: string | string[];
-  indentation?: number;
 }
 
 export interface Position {

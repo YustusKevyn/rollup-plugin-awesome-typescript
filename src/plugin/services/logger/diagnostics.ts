@@ -1,6 +1,6 @@
 import type { Logger } from ".";
 import type { Plugin } from "../..";
-import type { Properties } from "./types";
+import type { Record } from "./types";
 import type { Diagnostic, SourceFile } from "typescript";
 
 import { apply } from "../../util/ansi";
@@ -11,18 +11,18 @@ export class Diagnostics {
   public print(diagnostics: Readonly<Diagnostic> | Readonly<Diagnostic[]>) {
     let compiler = this.plugin.compiler.instance;
     for (let diagnostic of Array.isArray(diagnostics) ? diagnostics : [diagnostics]) {
-      let props = this.getProps(diagnostic);
+      let props = this.getRecord(diagnostic);
       if (diagnostic.category === compiler.DiagnosticCategory.Error) this.logger.error(props);
       else if (diagnostic.category === compiler.DiagnosticCategory.Warning) this.logger.warn(props);
-      else this.logger.info(props);
+      // else this.logger.info(props);
     }
   }
 
-  private getProps(diagnostic: Diagnostic) {
+  public getRecord(diagnostic: Diagnostic) {
     let compiler = this.plugin.compiler.instance,
-      props: Properties = {
+      props: Record = {
         message: compiler.flattenDiagnosticMessageText(diagnostic.messageText, this.logger.newLine),
-        prefix: "TS" + diagnostic.code
+        code: "TS" + diagnostic.code
       };
 
     // File
