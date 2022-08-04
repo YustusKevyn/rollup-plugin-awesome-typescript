@@ -61,8 +61,13 @@ declare module "typescript" {
     isDefaultIncludeSpec: boolean;
   }
 
+  export interface Program {
+    getMissingFilePaths(): readonly Path[];
+  }
+
   export interface BuilderProgram {
     getState(): ReusableBuilderProgramState;
+    getProgramOrUndefined(): Program | undefined;
   }
 
   export interface ReusableBuilderProgramState extends BuilderState {}

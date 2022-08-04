@@ -14,7 +14,7 @@ export class Diagnostics {
       let props = this.getRecord(diagnostic);
       if (diagnostic.category === compiler.DiagnosticCategory.Error) this.logger.error(props);
       else if (diagnostic.category === compiler.DiagnosticCategory.Warning) this.logger.warn(props);
-      // else this.logger.info(props);
+      else this.logger.info(props);
     }
   }
 

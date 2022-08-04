@@ -48,7 +48,7 @@ export class Compiler {
       path = require.resolve(input);
     } catch {
       if (isPath(input)) logger.error({ message: "Could not find the specified compiler.", path: input });
-      logger.error({ message: `Could not find the specified compiler ${apply(input, "yellow")}.` });
+      logger.error({ message: `Could not find the specified compiler "${input}".` });
       exit();
     }
 

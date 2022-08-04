@@ -11,7 +11,7 @@ export class Watcher {
     this.pending.set(path, event);
   }
 
-  public process() {
+  public update() {
     if (!this.pending.size) return;
     let pending = this.pending;
     this.pending = new Map();
@@ -19,6 +19,7 @@ export class Watcher {
     // Config
     let config = this.plugin.config;
     if (pending.has(config.path) || config.extends.some(path => pending.has(path))) config.update();
+    else config.updateRootFiles();
 
     // Program
     for (let [path, event] of pending) {

@@ -1,5 +1,5 @@
 import type { Options } from "../types";
-import type { LoadResult, PluginContext } from "rollup";
+import type { LoadResult, NormalizedInputOptions, PluginContext } from "rollup";
 
 import { Config } from "./services/config";
 import { Compiler } from "./services/compiler";
@@ -84,9 +84,7 @@ export class Plugin {
       ],
       LoggerLevel.Info
     );
-
-    this.config.updateRootFiles();
-    this.watcher.process();
+    this.watcher.update();
 
     context.addWatchFile(trueCase(this.config.path));
     for (let path of this.config.extends) context.addWatchFile(trueCase(path));

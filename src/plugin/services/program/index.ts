@@ -4,7 +4,7 @@ import type { CompilerHost, EmitAndSemanticDiagnosticsBuilderProgram } from "typ
 
 import { fileExists } from "../../util/fs";
 import { readFileSync } from "fs";
-import { normalizeCase, trueCase } from "../../util/path";
+import { normalizeCase } from "../../util/path";
 
 export enum FileKind {
   Missing,
@@ -58,12 +58,12 @@ export class Program {
     }
 
     this.files.set(path, file);
+    this.update();
     return file;
   }
 
   private compileFile(path: string) {
     let file = this.files.get(path) as ExistingFile;
-    this.update();
 
     // Output
     let output: Output = {},
@@ -86,6 +86,7 @@ export class Program {
     let file = this.files.get(path);
     if (!file) return;
     this.files.set(path, { kind: FileKind.Missing, version: new Date().getTime() });
+    this.update();
   }
 
   private deleteFile(path: string) {
@@ -105,6 +106,11 @@ export class Program {
   private getSource(path: string) {
     let file = this.getFile(path);
     return file.kind !== FileKind.Missing ? file.source : undefined;
+  }
+
+  private getSourceVersion(path: string) {
+    let file = this.files.get(path);
+    return file?.kind !== FileKind.Existing ? undefined : file.source.version;
   }
 
   public getOutput(path: string) {
@@ -171,10 +177,7 @@ export class Program {
   }
 
   public check(files: Set<string>) {
-    let compiler = this.plugin.compiler.instance,
-      logger = this.plugin.logger;
-
-    this.update();
+    let logger = this.plugin.logger;
     while (this.builder.getSemanticDiagnosticsOfNextAffectedFile()) {}
 
     let syntacticDiagnostics = [],

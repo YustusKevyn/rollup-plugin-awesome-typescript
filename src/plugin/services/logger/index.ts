@@ -56,27 +56,15 @@ export class Logger {
     console.log(final);
   }
 
-  // public info(props: Properties | string) {
-  //   if (this.level < LoggerLevel.Info) return;
-  //   if (typeof props === "string") props = { message: props };
+  public info(record: Record | string) {
+    if (this.level < Level.Info) return;
+    if (typeof record === "string") record = { message: record };
 
-  //   let final = " • ";
-  //   if (props.code) final += apply(props.code + " ", "grey");
-  //   final += props.message;
-  //   final += this.formatBody(props, props.indentation ?? 3);
-  //   console.log(final);
-  // }
-
-  // public debug(props: Properties | string) {
-  //   if (this.level < LoggerLevel.Debug) return;
-  //   if (typeof props === "string") props = { message: props };
-
-  //   let final = "";
-  //   if (props.code) final += apply(props.code + " ", "grey");
-  //   final += props.message;
-  //   final += this.formatBody(props, props.indentation ?? 0);
-  //   console.log(apply(final, "dim"));
-  // }
+    let final = this.newLine;
+    final += this.formatHeader(record, apply(" INFO ", "brightWhite", "bgCyan", "bold"), record.message);
+    final += this.formatBody(record, 7) + this.newLine;
+    console.log(final);
+  }
 
   public applyIndentation(arg: string | string[], indentation: number) {
     if (typeof arg === "string") arg = arg.split("\n");

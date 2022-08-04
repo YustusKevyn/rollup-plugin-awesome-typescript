@@ -79,7 +79,7 @@ export class Config {
         parent = dirname(dir);
       }
 
-      logger.error(`Configuration file with name ${apply(input, "yellow")} does not exist in directory tree.`);
+      logger.error(`Configuration file with name "${input}" does not exist in directory tree.`);
       exit();
     }
   }

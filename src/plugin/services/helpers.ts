@@ -46,7 +46,7 @@ export class Helpers {
       path = require.resolve(input);
     } catch {
       if (isPath(input)) logger.error({ message: "Could not find the specified helper library.", path: input });
-      logger.error({ message: `Could not find the specified helper library ${apply(input, "yellow")}.` });
+      logger.error({ message: `Could not find the specified helper library "${input}".` });
       exit();
     }
 

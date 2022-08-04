@@ -8,7 +8,7 @@ export function awesomeTypescript(options?: Options): RollupPlugin {
   return {
     name: "awesome-typescript",
     watchChange: (id, change) => plugin.watcher.register(id, change.event),
-    buildStart: function () {
+    buildStart: function (options) {
       return plugin.handleStart(this);
     },
     resolveId: (id, origin) => plugin.resolve(id, origin),
