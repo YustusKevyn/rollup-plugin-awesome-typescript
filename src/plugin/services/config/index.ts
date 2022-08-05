@@ -1,9 +1,10 @@
 import type { Plugin } from "../..";
+
+import type { Options } from "../../../types";
 import type { CompilerOptions, ModuleKind } from "typescript";
-import type { State, Diagnostics } from "./types";
+import type { State, Diagnostics, Fallback } from "./types";
 
 import { exit } from "../../util/process";
-import { apply } from "../../util/ansi";
 import { isPath, normalize } from "../../util/path";
 import { dirname, isAbsolute, join, resolve } from "path";
 
@@ -12,13 +13,15 @@ export class Config {
   private base: string;
 
   private state!: State;
+  private fallback: Fallback;
   private diagnostics!: Diagnostics;
 
   private supportedModuleKinds: ModuleKind[];
 
-  constructor(private plugin: Plugin, input: string) {
+  constructor(private plugin: Plugin, options: Options, input: string) {
     this.path = normalize(this.find(input));
     this.base = this.plugin.context ?? dirname(this.path);
+    this.fallback = this.getFallback(options);
     this.supportedModuleKinds = this.getSupportedModuleKinds();
     this.load();
   }
@@ -105,10 +108,14 @@ export class Config {
       ...config.options,
       noEmit: false,
       noResolve: false,
+      incremental: true,
       skipLibCheck: true,
       importHelpers: true,
       inlineSourceMap: false
     };
+
+    if (!options.tsBuildInfoFile && this.fallback.buildInfoFile) options.tsBuildInfoFile = this.fallback.buildInfoFile;
+    if (!options.declarationDir && this.fallback.declarationDir) options.declarationDir = this.fallback.declarationDir;
 
     // Module
     if (options.module === undefined) options.module = compiler.ModuleKind.ESNext;
@@ -151,6 +158,24 @@ export class Config {
       []
     );
     this.plugin.program.update();
+  }
+
+  private getFallback(options: Options) {
+    let fallback: Fallback = {};
+
+    // Declarations
+    if (options.declarations) {
+      if (isAbsolute(options.declarations)) fallback.declarationDir = options.declarations;
+      else fallback.declarationDir = resolve(this.plugin.cwd, options.declarations);
+    }
+
+    // Build Info
+    if (options.buildInfo) {
+      if (isAbsolute(options.buildInfo)) fallback.buildInfoFile = options.buildInfo;
+      else fallback.buildInfoFile = resolve(this.plugin.cwd, options.buildInfo);
+    }
+
+    return fallback;
   }
 
   private getSupportedModuleKinds() {

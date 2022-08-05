@@ -39,14 +39,14 @@ export class Plugin {
 
     this.compiler = new Compiler(this, options.compiler ?? "typescript");
     this.helpers = new Helpers(this, options.helpers ?? "tslib");
-    this.config = new Config(this, options.config ?? "tsconfig.json");
+    this.config = new Config(this, options, options.config ?? "tsconfig.json");
 
     this.filter = new Filter(this);
     this.resolver = new Resolver(this);
     this.watcher = new Watcher(this);
 
     this.program = new Program(this);
-    this.emitter = new Emitter(this, options);
+    this.emitter = new Emitter(this);
   }
 
   public resolve(id: string, origin?: string) {

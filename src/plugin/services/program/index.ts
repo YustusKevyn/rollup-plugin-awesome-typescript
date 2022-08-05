@@ -2,6 +2,7 @@ import type { Plugin } from "../..";
 import type { ExistingFile, File, Output } from "./types";
 import type { CompilerHost, EmitAndSemanticDiagnosticsBuilderProgram } from "typescript";
 
+import { compare } from "../../util/object";
 import { fileExists } from "../../util/fs";
 import { readFileSync } from "fs";
 import { normalizeCase } from "../../util/path";
@@ -58,7 +59,6 @@ export class Program {
     }
 
     this.files.set(path, file);
-    this.update();
     return file;
   }
 
@@ -86,7 +86,6 @@ export class Program {
     let file = this.files.get(path);
     if (!file) return;
     this.files.set(path, { kind: FileKind.Missing, version: new Date().getTime() });
-    this.update();
   }
 
   private deleteFile(path: string) {
@@ -172,14 +171,35 @@ export class Program {
     );
   }
 
+  private isBuilderUpToDate() {
+    let program = this.builder.getProgramOrUndefined();
+    if (!program) return false;
+
+    // Compiler options
+    if (!compare(program.getCompilerOptions(), this.plugin.config.options)) return false;
+
+    // Source files
+    let oldSourceFiles = program.getSourceFiles();
+    if (oldSourceFiles.some(source => source.version !== this.getSourceVersion(source.resolvedPath))) return false;
+
+    // Root files
+    let oldRootFiles = program.getRootFileNames(),
+      newRootFiles = this.plugin.config.rootFiles;
+    if (oldRootFiles.length !== newRootFiles.length) return false;
+    if (oldRootFiles.some(id => !newRootFiles.includes(id))) return false;
+
+    // Missing files
+    if (program.getMissingFilePaths().some(fileExists)) return false;
+
+    return true;
+  }
+
   public update() {
-    this.builder = this.createBuilder();
+    while (this.builder.getSemanticDiagnosticsOfNextAffectedFile());
+    if (!this.isBuilderUpToDate()) this.builder = this.createBuilder();
   }
 
   public check(files: Set<string>) {
-    let logger = this.plugin.logger;
-    while (this.builder.getSemanticDiagnosticsOfNextAffectedFile()) {}
-
     let syntacticDiagnostics = [],
       semanticDiagnostics = [];
     for (let path of files) {
@@ -190,7 +210,15 @@ export class Program {
       semanticDiagnostics.push(...this.builder.getSemanticDiagnostics(source));
     }
 
+    let logger = this.plugin.logger;
     logger.diagnostics.print(syntacticDiagnostics);
     logger.diagnostics.print(semanticDiagnostics);
   }
+
+  // public getBuildInfo() {
+  //   let buildInfo: string | undefined,
+  //     { diagnostics } = this.builder.getProgram().emitBuildInfo((path, text) => (buildInfo = text));
+  //   if (diagnostics) this.plugin.logger.diagnostics.print(diagnostics);
+  //   return buildInfo;
+  // }
 }

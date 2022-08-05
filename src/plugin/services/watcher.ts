@@ -22,9 +22,12 @@ export class Watcher {
     else config.updateRootFiles();
 
     // Program
-    for (let [path, event] of pending) {
-      if (event === "delete") this.plugin.program.removeFile(path);
-      else if (this.plugin.filter.includes(path)) this.plugin.program.updateFile(path);
+    if (pending.size) {
+      for (let [path, event] of pending) {
+        if (event === "delete") this.plugin.program.removeFile(path);
+        else if (this.plugin.filter.includes(path)) this.plugin.program.updateFile(path);
+      }
+      this.plugin.program.update();
     }
   }
 }

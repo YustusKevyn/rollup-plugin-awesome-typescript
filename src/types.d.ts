@@ -9,5 +9,6 @@ export interface Options {
   helpers?: string | undefined;
   compiler?: string | undefined;
 
+  buildInfo?: string | undefined;
   declarations?: string | undefined;
 }

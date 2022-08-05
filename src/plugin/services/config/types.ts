@@ -6,6 +6,11 @@ export interface Diagnostics {
   warnings: LoggerRecord[];
 }
 
+export interface Fallback {
+  buildInfoFile?: string;
+  declarationDir?: string;
+}
+
 export interface State {
   target: ScriptTarget;
   source: TsConfigSourceFile;

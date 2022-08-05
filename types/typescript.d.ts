@@ -63,6 +63,7 @@ declare module "typescript" {
 
   export interface Program {
     getMissingFilePaths(): readonly Path[];
+    emitBuildInfo(writeFile?: WriteFileCallback, cancellationToken?: CancellationToken): EmitResult;
   }
 
   export interface BuilderProgram {
