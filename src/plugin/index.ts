@@ -1,5 +1,5 @@
 import type { Options } from "../types";
-import type { LoadResult, NormalizedInputOptions, PluginContext } from "rollup";
+import type { LoadResult, PluginContext } from "rollup";
 
 import { Config } from "./services/config";
 import { Compiler } from "./services/compiler";
@@ -24,25 +24,25 @@ export class Plugin {
   readonly helpers: Helpers;
   readonly config: Config;
 
-  readonly filter: Filter;
   readonly resolver: Resolver;
+  readonly filter: Filter;
   readonly watcher: Watcher;
 
   readonly program: Program;
   readonly emitter: Emitter;
 
-  constructor(options: Options) {
+  constructor(readonly options: Options) {
     if (options.cwd) this.cwd = normalize(options.cwd, this.cwd);
     if (options.context) this.context = normalize(options.context, this.cwd);
 
     this.logger = new Logger(this, LoggerLevel.Info);
 
-    this.compiler = new Compiler(this, options.compiler ?? "typescript");
-    this.helpers = new Helpers(this, options.helpers ?? "tslib");
-    this.config = new Config(this, options, options.config ?? "tsconfig.json");
+    this.compiler = new Compiler(this);
+    this.helpers = new Helpers(this);
+    this.config = new Config(this);
 
-    this.filter = new Filter(this);
     this.resolver = new Resolver(this);
+    this.filter = new Filter(this);
     this.watcher = new Watcher(this);
 
     this.program = new Program(this);

@@ -2,6 +2,7 @@ import type { CompilerOptions, ProjectReference, ScriptTarget, TsConfigSourceFil
 import type { LoggerRecord } from "../logger";
 
 export interface Diagnostics {
+  infos: LoggerRecord[];
   errors: LoggerRecord[];
   warnings: LoggerRecord[];
 }

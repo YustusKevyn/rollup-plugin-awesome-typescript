@@ -3,10 +3,10 @@
     "strict": true,
     "module": "ESNext",
     "target": "ESNext",
+    "skipLibCheck": true,
     "esModuleInterop": true,
     "moduleResolution": "node",
-    "exactOptionalPropertyTypes": true,
-    "typeRoots": ["node_modules/@types", "types"]
+    "exactOptionalPropertyTypes": true
   },
   "exclude": ["lib"]
 }

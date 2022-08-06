@@ -13,8 +13,8 @@ export class Helpers {
   private version?: string;
   private supported: boolean = false;
 
-  constructor(private plugin: Plugin, input: string) {
-    let [path, name, version, supported] = this.find(input);
+  constructor(private plugin: Plugin) {
+    let [path, name, version, supported] = this.find();
 
     this.path = path;
     if (name) this.name = name;
@@ -36,8 +36,9 @@ export class Helpers {
     return final;
   }
 
-  private find(input: string): [path: string, name?: string, version?: string, supported?: boolean] {
-    let logger = this.plugin.logger;
+  private find(): [path: string, name?: string, version?: string, supported?: boolean] {
+    let input = this.plugin.options.helpers ?? "tslib",
+      logger = this.plugin.logger;
     if (isRelative(input)) input = resolve(input, this.plugin.cwd);
 
     // Path

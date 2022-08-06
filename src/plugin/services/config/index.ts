@@ -1,28 +1,32 @@
 import type { Plugin } from "../..";
 
-import type { Options } from "../../../types";
-import type { CompilerOptions, ModuleKind } from "typescript";
+import type { CompilerOptions, ModuleKind, ParseConfigHost } from "typescript";
 import type { State, Diagnostics, Fallback } from "./types";
 
 import { exit } from "../../util/process";
 import { isPath, normalize } from "../../util/path";
 import { dirname, isAbsolute, join, resolve } from "path";
+import { isCaseSensitive } from "../../util/fs";
 
 export class Config {
   readonly path: string;
   private base: string;
 
-  private state!: State;
+  private host: ParseConfigHost;
   private fallback: Fallback;
-  private diagnostics!: Diagnostics;
-
   private supportedModuleKinds: ModuleKind[];
 
-  constructor(private plugin: Plugin, options: Options, input: string) {
-    this.path = normalize(this.find(input));
+  private state!: State;
+  private diagnostics!: Diagnostics;
+
+  constructor(private plugin: Plugin) {
+    this.path = normalize(this.find());
     this.base = this.plugin.context ?? dirname(this.path);
-    this.fallback = this.getFallback(options);
+
+    this.host = this.createHost();
+    this.fallback = this.createFallback();
     this.supportedModuleKinds = this.getSupportedModuleKinds();
+
     this.load();
   }
 
@@ -51,12 +55,14 @@ export class Config {
   }
 
   public check() {
+    for (let info of this.diagnostics.infos) this.plugin.logger.info(info);
     for (let warning of this.diagnostics.warnings) this.plugin.logger.warn(warning);
     for (let error of this.diagnostics.errors) this.plugin.logger.error(error);
   }
 
-  private find(input: string) {
-    let compiler = this.plugin.compiler.instance,
+  private find() {
+    let input = this.plugin.options.config ?? "tsconfig.json",
+      compiler = this.plugin.compiler.instance,
       logger = this.plugin.logger;
 
     // Path
@@ -90,7 +96,7 @@ export class Config {
   private load() {
     let logger = this.plugin.logger,
       compiler = this.plugin.compiler.instance,
-      diagnostics: Diagnostics = { warnings: [], errors: [] };
+      diagnostics: Diagnostics = { errors: [], warnings: [], infos: [] };
 
     // Read
     let source = compiler.readJsonConfigFile(this.path, compiler.sys.readFile);
@@ -100,7 +106,7 @@ export class Config {
     }
 
     // Parse
-    let config = compiler.parseJsonSourceFileConfigFileContent(source, compiler.sys, this.base);
+    let config = compiler.parseJsonSourceFileConfigFileContent(source, this.host, this.base);
     for (let error of config.errors) diagnostics.errors.push(logger.diagnostics.getRecord(error));
 
     // Options
@@ -114,10 +120,34 @@ export class Config {
       inlineSourceMap: false
     };
 
-    if (!options.tsBuildInfoFile && this.fallback.buildInfoFile) options.tsBuildInfoFile = this.fallback.buildInfoFile;
-    if (!options.declarationDir && this.fallback.declarationDir) options.declarationDir = this.fallback.declarationDir;
+    if (!options.tsBuildInfoFile) {
+      if (this.fallback.buildInfoFile) options.tsBuildInfoFile = this.fallback.buildInfoFile;
+      else if (this.plugin.options.buildInfo !== false) {
+        diagnostics.infos.push({
+          message:
+            "It is recommended to specify a file for storing incremental compilation information to reduce rebuild time.",
+          description: [
+            'Specify "tsBuildInfoFile" in the TSConfig or "buildInfo" in the plugin options.',
+            'You can silence this message by explicitly setting "buildInfo" to `false` in the plugin options.'
+          ]
+        });
+      }
+    }
 
-    // Module
+    if (!options.declarationDir) {
+      if (this.fallback.declarationDir) options.declarationDir = this.fallback.declarationDir;
+      else if (options.declaration && this.plugin.options.declarations !== false) {
+        diagnostics.warnings.push({
+          message:
+            'Skipping the output of declaration files. Although "declaration" is set to `true` in the TSConfig, no output directory was specified.',
+          description: [
+            'Specify "declarationDir" in the TSConfig or "declarations" in the plugin options.',
+            'You can silence this warning by explicitly setting "declarations" to `false` in the plugin options.'
+          ]
+        });
+      }
+    }
+
     if (options.module === undefined) options.module = compiler.ModuleKind.ESNext;
     else if (!this.supportedModuleKinds.includes(options.module)) {
       let names = this.supportedModuleKinds.map(kind => compiler.ModuleKind[kind]).join(", ");
@@ -144,6 +174,7 @@ export class Config {
 
   public update() {
     this.load();
+    this.plugin.filter.update();
     this.plugin.resolver.update();
     this.plugin.program.update();
   }
@@ -154,28 +185,11 @@ export class Config {
       this.state.source.configFileSpecs!,
       this.base,
       this.state.options,
-      compiler.sys,
+      this.host,
       []
     );
+    this.plugin.filter.update();
     this.plugin.program.update();
-  }
-
-  private getFallback(options: Options) {
-    let fallback: Fallback = {};
-
-    // Declarations
-    if (options.declarations) {
-      if (isAbsolute(options.declarations)) fallback.declarationDir = options.declarations;
-      else fallback.declarationDir = resolve(this.plugin.cwd, options.declarations);
-    }
-
-    // Build Info
-    if (options.buildInfo) {
-      if (isAbsolute(options.buildInfo)) fallback.buildInfoFile = options.buildInfo;
-      else fallback.buildInfoFile = resolve(this.plugin.cwd, options.buildInfo);
-    }
-
-    return fallback;
   }
 
   private getSupportedModuleKinds() {
@@ -187,5 +201,40 @@ export class Config {
       if (value >= ModuleKind.ES2015 && value <= ModuleKind.ESNext) final.push(value);
     }
     return final;
+  }
+
+  private createHost(): ParseConfigHost {
+    let sys = this.plugin.compiler.instance.sys;
+    return {
+      fileExists: sys.fileExists,
+      readDirectory: sys.readDirectory,
+      readFile: sys.readFile,
+      useCaseSensitiveFileNames: isCaseSensitive
+    };
+  }
+
+  private createFallback() {
+    let { declarations, buildInfo } = this.plugin.options,
+      fallback: Fallback = {};
+
+    // Declarations
+    if (declarations) {
+      if (declarations === true) declarations = "lib/types";
+      if (typeof declarations === "string") {
+        if (isAbsolute(declarations)) fallback.declarationDir = declarations;
+        else fallback.declarationDir = resolve(this.plugin.cwd, declarations);
+      }
+    }
+
+    // Build Info
+    if (buildInfo) {
+      if (buildInfo === true) buildInfo = ".tsbuildinfo";
+      if (typeof buildInfo === "string") {
+        if (isAbsolute(buildInfo)) fallback.buildInfoFile = buildInfo;
+        else fallback.buildInfoFile = resolve(this.plugin.cwd, buildInfo);
+      }
+    }
+
+    return fallback;
   }
 }

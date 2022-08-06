@@ -61,7 +61,11 @@ export class Logger {
     if (typeof record === "string") record = { message: record };
 
     let final = this.newLine;
-    final += this.formatHeader(record, apply(" INFO ", "brightWhite", "bgCyan", "bold"), record.message);
+    final += this.formatHeader(
+      record,
+      apply(" INFO ", "brightWhite", "bgCyan", "bold"),
+      apply(record.message, "cyan", "bold")
+    );
     final += this.formatBody(record, 7) + this.newLine;
     console.log(final);
   }

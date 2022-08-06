@@ -2,6 +2,7 @@ import type { Plugin } from "..";
 import type { ModuleResolutionCache, ModuleResolutionHost } from "typescript";
 
 import { normalizeCase } from "../util/path";
+import { isCaseSensitive } from "../util/fs";
 
 export class Resolver {
   readonly host: ModuleResolutionHost;
@@ -39,7 +40,7 @@ export class Resolver {
       readFile: sys.readFile,
       directoryExists: sys.directoryExists,
       getDirectories: sys.getDirectories,
-      useCaseSensitiveFileNames: () => sys.useCaseSensitiveFileNames,
+      useCaseSensitiveFileNames: () => isCaseSensitive,
       realpath: sys.realpath
     };
   }

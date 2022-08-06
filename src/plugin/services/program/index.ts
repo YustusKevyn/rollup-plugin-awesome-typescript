@@ -2,10 +2,10 @@ import type { Plugin } from "../..";
 import type { ExistingFile, File, Output } from "./types";
 import type { CompilerHost, EmitAndSemanticDiagnosticsBuilderProgram } from "typescript";
 
-import { compare } from "../../util/object";
-import { fileExists } from "../../util/fs";
 import { readFileSync } from "fs";
+import { compare } from "../../util/object";
 import { normalizeCase } from "../../util/path";
+import { fileExists, isCaseSensitive } from "../../util/fs";
 
 export enum FileKind {
   Missing,
@@ -16,7 +16,7 @@ export class Program {
   private files: Map<string, File> = new Map();
 
   private host: CompilerHost;
-  private builder: EmitAndSemanticDiagnosticsBuilderProgram;
+  public builder: EmitAndSemanticDiagnosticsBuilderProgram;
 
   constructor(private plugin: Plugin) {
     this.host = this.createHost();
@@ -148,7 +148,7 @@ export class Program {
       getSourceFileByPath: (id, path) => this.getSource(path),
       readFile: compiler.sys.readFile,
       writeFile: () => {},
-      useCaseSensitiveFileNames: () => compiler.sys.useCaseSensitiveFileNames,
+      useCaseSensitiveFileNames: () => isCaseSensitive,
       createHash: compiler.sys.createHash,
       directoryExists: compiler.sys.directoryExists,
       getDirectories: compiler.sys.getDirectories,
@@ -214,11 +214,4 @@ export class Program {
     logger.diagnostics.print(syntacticDiagnostics);
     logger.diagnostics.print(semanticDiagnostics);
   }
-
-  // public getBuildInfo() {
-  //   let buildInfo: string | undefined,
-  //     { diagnostics } = this.builder.getProgram().emitBuildInfo((path, text) => (buildInfo = text));
-  //   if (diagnostics) this.plugin.logger.diagnostics.print(diagnostics);
-  //   return buildInfo;
-  // }
 }
