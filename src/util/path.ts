@@ -4,7 +4,11 @@ import _path from "path";
 import { trueCasePathSync } from "true-case-path";
 
 export function isPath(path: string) {
-  return _path.isAbsolute(path) || isRelative(path) || /\\|\//.test(path);
+  return isDistinct(path) || /\\|\//.test(path);
+}
+
+export function isDistinct(path: string) {
+  return _path.isAbsolute(path) || isRelative(path);
 }
 
 export function isRelative(path: string) {

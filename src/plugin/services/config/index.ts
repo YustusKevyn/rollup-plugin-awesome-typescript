@@ -1,19 +1,18 @@
 import type { Plugin } from "../..";
 
 import type { CompilerOptions, ModuleKind, ParseConfigHost } from "typescript";
-import type { State, Diagnostics, Fallback } from "./types";
+import type { State, Diagnostics } from "./types";
 
-import { exit } from "../../util/process";
-import { isPath, normalize } from "../../util/path";
+import { exit } from "../../../util/process";
+import { isPath, normalize } from "../../../util/path";
 import { dirname, isAbsolute, join, resolve } from "path";
-import { isCaseSensitive } from "../../util/fs";
+import { isCaseSensitive } from "../../../util/fs";
 
 export class Config {
   readonly path: string;
   private base: string;
 
   private host: ParseConfigHost;
-  private fallback: Fallback;
   private supportedModuleKinds: ModuleKind[];
 
   private state!: State;
@@ -24,7 +23,6 @@ export class Config {
     this.base = this.plugin.context ?? dirname(this.path);
 
     this.host = this.createHost();
-    this.fallback = this.createFallback();
     this.supportedModuleKinds = this.getSupportedModuleKinds();
 
     this.load();
@@ -95,8 +93,8 @@ export class Config {
 
   private load() {
     let logger = this.plugin.logger,
-      compiler = this.plugin.compiler.instance,
-      diagnostics: Diagnostics = { errors: [], warnings: [], infos: [] };
+      compiler = this.plugin.compiler.instance;
+    this.diagnostics = { errors: [], warnings: [], infos: [] };
 
     // Read
     let source = compiler.readJsonConfigFile(this.path, compiler.sys.readFile);
@@ -107,75 +105,112 @@ export class Config {
 
     // Parse
     let config = compiler.parseJsonSourceFileConfigFileContent(source, this.host, this.base);
-    for (let error of config.errors) diagnostics.errors.push(logger.diagnostics.getRecord(error));
-
-    // Options
-    let options: CompilerOptions = {
-      ...config.options,
-      noEmit: false,
-      noResolve: false,
-      incremental: true,
-      skipLibCheck: true,
-      importHelpers: true,
-      inlineSourceMap: false
-    };
-
-    if (!options.tsBuildInfoFile) {
-      if (this.fallback.buildInfoFile) options.tsBuildInfoFile = this.fallback.buildInfoFile;
-      else if (this.plugin.options.buildInfo !== false) {
-        diagnostics.infos.push({
-          message:
-            "It is recommended to specify a file for storing incremental compilation information to reduce rebuild time.",
-          description: [
-            'Specify "tsBuildInfoFile" in the TSConfig or "buildInfo" in the plugin options.',
-            'You can silence this message by explicitly setting "buildInfo" to `false` in the plugin options.'
-          ]
-        });
-      }
-    }
-
-    if (!options.declarationDir) {
-      if (this.fallback.declarationDir) options.declarationDir = this.fallback.declarationDir;
-      else if (options.declaration && this.plugin.options.declarations !== false) {
-        diagnostics.warnings.push({
-          message:
-            'Skipping the output of declaration files. Although "declaration" is set to `true` in the TSConfig, no output directory was specified.',
-          description: [
-            'Specify "declarationDir" in the TSConfig or "declarations" in the plugin options.',
-            'You can silence this warning by explicitly setting "declarations" to `false` in the plugin options.'
-          ]
-        });
-      }
-    }
-
-    if (options.module === undefined) options.module = compiler.ModuleKind.ESNext;
-    else if (!this.supportedModuleKinds.includes(options.module)) {
-      let names = this.supportedModuleKinds.map(kind => compiler.ModuleKind[kind]).join(", ");
-      diagnostics.errors.push({
-        message: `Unsupported module kind: ${compiler.ModuleKind[options.module]}.`,
-        description: [
-          "Rollup requires TypeScript to produce files using the ES Modules syntax.",
-          `Use one of the available ES Modules options: ${names}.`
-        ]
-      });
-    }
+    for (let error of config.errors) this.diagnostics.errors.push(logger.diagnostics.getRecord(error));
+    this.normalise(config.options);
 
     // Save
-    this.diagnostics = diagnostics;
     this.state = {
       source,
-      options,
-      target: compiler.getEmitScriptTarget(options),
+      options: config.options,
+      target: compiler.getEmitScriptTarget(config.options),
       extends: source.extendedSourceFiles ?? [],
       rootFiles: config.fileNames,
       references: config.projectReferences ?? []
     };
   }
 
+  private normalise(options: CompilerOptions) {
+    let { buildInfo, declarations } = this.plugin.options,
+      compiler = this.plugin.compiler.instance;
+
+    // Force
+    options.noEmit = false;
+    options.noEmitOnError = false;
+    options.noEmitHelpers = false;
+    options.noResolve = false;
+    options.incremental = true;
+    options.skipLibCheck = true;
+    options.importHelpers = true;
+    options.inlineSourceMap = false;
+
+    // Resolution
+    // if (options.moduleResolution === compiler.ModuleResolutionKind.Classic) {
+    //   this.diagnostics.errors.push({
+    //     message: `Unsupported module resolution kind: ${compiler.ModuleKind[options.moduleResolution]}.`,
+    //     description: [
+    //       "Rollup requires TypeScript to produce files using the ES Modules syntax.",
+    //       `Set "module" in the TSConfig to one of the available ES Modules options: ${names}.`
+    //     ]
+    //   });
+    // }
+
+    // Module
+    if (options.module === undefined) options.module = compiler.ModuleKind.ESNext;
+    else if (!this.supportedModuleKinds.includes(options.module)) {
+      let names = this.supportedModuleKinds.map(kind => compiler.ModuleKind[kind]).join(", ");
+      this.diagnostics.errors.push({
+        message: `Unsupported module kind: ${compiler.ModuleKind[options.module]}.`,
+        description: [
+          "Rollup requires TypeScript to produce files using the ES Modules syntax.",
+          `Set "module" in the TSConfig to one of the available ES Modules options: ${names}.`
+        ]
+      });
+    }
+
+    // Declarations
+    if (declarations !== undefined) {
+      options.declaration = declarations !== false;
+
+      if (typeof declarations === "string") {
+        if (isAbsolute(declarations)) options.declarationDir = declarations;
+        else options.declarationDir = resolve(this.plugin.cwd, declarations);
+      } else if (declarations === true && options.declarationDir === undefined) {
+        this.diagnostics.warnings.push({
+          message:
+            'The output of declaration files is disabled. Although "declarations" is set to `true` in the plugin options, no output directory was specified.',
+          description:
+            'Specify "declarationDir" in the TSConfig or replace "declarations" in the plugin options with an output directory.'
+        });
+      }
+    } else if (options.declaration === true && options.declarationDir === undefined) {
+      this.diagnostics.warnings.push({
+        message:
+          'The output of declaration files is disabled. Although "declaration" is set to `true` in the TSConfig, no output directory was specified.',
+        description: [
+          'Specify an output directory using "declarationDir" in the TSConfig or "declarations" in the plugin options.',
+          'You can silence this warning by explicitly setting "declarations" to `false` in the plugin options.'
+        ]
+      });
+    }
+
+    // Build Info
+    if (buildInfo !== undefined) {
+      if (buildInfo === false) delete options.tsBuildInfoFile;
+      else if (buildInfo === true && options.tsBuildInfoFile === undefined) buildInfo = ".tsbuildinfo";
+
+      if (typeof buildInfo === "string") {
+        if (isAbsolute(buildInfo)) options.tsBuildInfoFile = buildInfo;
+        else options.tsBuildInfoFile = resolve(this.plugin.cwd, buildInfo);
+      }
+    } else if (options.tsBuildInfoFile === undefined) {
+      this.diagnostics.infos.push({
+        message:
+          "It is recommended to specify a file for storing incremental compilation information to reduce rebuild time.",
+        description: [
+          'Specify "tsBuildInfoFile" in the TSConfig or "buildInfo" in the plugin options.',
+          'You can silence this message by explicitly setting "buildInfo" to `false` in the plugin options.'
+        ]
+      });
+    }
+  }
+
   public update() {
+    let compiler = this.plugin.compiler.instance,
+      oldOptions = this.state.options;
+
     this.load();
     this.plugin.filter.update();
-    this.plugin.resolver.update();
+    if (compiler.changesAffectModuleResolution(oldOptions, this.state.options)) this.plugin.resolver.update();
     this.plugin.program.update();
   }
 
@@ -211,30 +246,5 @@ export class Config {
       readFile: sys.readFile,
       useCaseSensitiveFileNames: isCaseSensitive
     };
-  }
-
-  private createFallback() {
-    let { declarations, buildInfo } = this.plugin.options,
-      fallback: Fallback = {};
-
-    // Declarations
-    if (declarations) {
-      if (declarations === true) declarations = "lib/types";
-      if (typeof declarations === "string") {
-        if (isAbsolute(declarations)) fallback.declarationDir = declarations;
-        else fallback.declarationDir = resolve(this.plugin.cwd, declarations);
-      }
-    }
-
-    // Build Info
-    if (buildInfo) {
-      if (buildInfo === true) buildInfo = ".tsbuildinfo";
-      if (typeof buildInfo === "string") {
-        if (isAbsolute(buildInfo)) fallback.buildInfoFile = buildInfo;
-        else fallback.buildInfoFile = resolve(this.plugin.cwd, buildInfo);
-      }
-    }
-
-    return fallback;
   }
 }

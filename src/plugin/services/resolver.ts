@@ -1,8 +1,8 @@
 import type { Plugin } from "..";
 import type { ModuleResolutionCache, ModuleResolutionHost } from "typescript";
 
-import { normalizeCase } from "../util/path";
-import { isCaseSensitive } from "../util/fs";
+import { normalizeCase } from "../../util/path";
+import { isCaseSensitive } from "../../util/fs";
 
 export class Resolver {
   readonly host: ModuleResolutionHost;
@@ -54,6 +54,7 @@ export class Resolver {
   }
 
   public update() {
+    this.cache.clear();
     this.cache.update(this.plugin.config.options);
   }
 }

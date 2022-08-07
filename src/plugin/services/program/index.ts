@@ -3,9 +3,9 @@ import type { ExistingFile, File, Output } from "./types";
 import type { CompilerHost, EmitAndSemanticDiagnosticsBuilderProgram } from "typescript";
 
 import { readFileSync } from "fs";
-import { compare } from "../../util/object";
-import { normalizeCase } from "../../util/path";
-import { fileExists, isCaseSensitive } from "../../util/fs";
+import { normalizeCase } from "../../../util/path";
+import { fileExists, isCaseSensitive } from "../../../util/fs";
+import { compareArrays, compareObjects } from "../../../util/data";
 
 export enum FileKind {
   Missing,
@@ -176,17 +176,14 @@ export class Program {
     if (!program) return false;
 
     // Compiler options
-    if (!compare(program.getCompilerOptions(), this.plugin.config.options)) return false;
+    if (!compareObjects(program.getCompilerOptions(), this.plugin.config.options)) return false;
 
     // Source files
     let oldSourceFiles = program.getSourceFiles();
     if (oldSourceFiles.some(source => source.version !== this.getSourceVersion(source.resolvedPath))) return false;
 
     // Root files
-    let oldRootFiles = program.getRootFileNames(),
-      newRootFiles = this.plugin.config.rootFiles;
-    if (oldRootFiles.length !== newRootFiles.length) return false;
-    if (oldRootFiles.some(id => !newRootFiles.includes(id))) return false;
+    if (!compareArrays(program.getRootFileNames(), this.plugin.config.rootFiles)) return false;
 
     // Missing files
     if (program.getMissingFilePaths().some(fileExists)) return false;
@@ -195,6 +192,7 @@ export class Program {
   }
 
   public update() {
+    console.log(this.isBuilderUpToDate());
     while (this.builder.getSemanticDiagnosticsOfNextAffectedFile());
     if (!this.isBuilderUpToDate()) this.builder = this.createBuilder();
   }

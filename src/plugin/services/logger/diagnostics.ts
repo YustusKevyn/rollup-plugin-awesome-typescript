@@ -3,7 +3,7 @@ import type { Plugin } from "../..";
 import type { Record } from "./types";
 import type { Diagnostic, SourceFile } from "typescript";
 
-import { apply } from "../../util/ansi";
+import { apply } from "../../../util/ansi";
 
 export class Diagnostics {
   constructor(private logger: Logger, private plugin: Plugin) {}

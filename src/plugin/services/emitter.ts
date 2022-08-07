@@ -2,8 +2,8 @@ import type { Plugin } from "..";
 
 import { dirname, join, relative } from "path";
 import { mkdirSync, writeFileSync } from "fs";
-import { normalizeCase } from "../util/path";
-import { directoryExists } from "../util/fs";
+import { normalizeCase } from "../../util/path";
+import { directoryExists } from "../../util/fs";
 
 export class Emitter {
   constructor(private plugin: Plugin) {}

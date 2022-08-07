@@ -11,8 +11,8 @@ import { Program } from "./services/program";
 import { Resolver } from "./services/resolver";
 import { Watcher } from "./services/watcher";
 
-import { apply } from "./util/ansi";
-import { trueCase, normalize } from "./util/path";
+import { apply } from "../util/ansi";
+import { trueCase, normalize } from "../util/path";
 
 export class Plugin {
   readonly cwd: string = normalize(process.cwd());
@@ -76,7 +76,7 @@ export class Plugin {
     this.logger.log(
       [
         this.logger.padding,
-        apply("awesome-typescript", "underline"),
+        apply("Awesome TypeScript", "underline"),
         ...this.compiler.header,
         ...this.helpers.header,
         ...this.config.header,

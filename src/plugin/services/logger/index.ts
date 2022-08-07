@@ -3,7 +3,7 @@ import type { Position, Record } from "./types";
 
 import { Diagnostics } from "./diagnostics";
 
-import { apply } from "../../util/ansi";
+import { apply } from "../../../util/ansi";
 import { relative } from "path";
 
 enum Level {

@@ -1,9 +1,9 @@
 import type { Plugin } from "..";
 
 import { lt } from "semver";
-import { exit } from "../util/process";
-import { apply } from "../util/ansi";
-import { isPath, isRelative } from "../util/path";
+import { exit } from "../../util/process";
+import { apply } from "../../util/ansi";
+import { isDistinct, isRelative } from "../../util/path";
 import { join, resolve } from "path";
 
 export class Helpers {
@@ -31,7 +31,7 @@ export class Helpers {
     final.push(title);
 
     if (!this.supported)
-      final.push(apply("   This helper library may not be compatible with awesome-typescript", "grey"));
+      final.push(apply("   This helper library may not be compatible with Awesome TypeScript", "grey"));
 
     return final;
   }
@@ -46,7 +46,7 @@ export class Helpers {
     try {
       path = require.resolve(input);
     } catch {
-      if (isPath(input)) logger.error({ message: "Could not find the specified helper library.", path: input });
+      if (isDistinct(input)) logger.error({ message: "Could not find the specified helper library.", path: input });
       logger.error({ message: `Could not find the specified helper library "${input}".` });
       exit();
     }
@@ -64,7 +64,7 @@ export class Helpers {
     if (name !== "tslib") return [path, name, version];
     if (typeof version !== "string" || lt(version, "2.4.0")) {
       logger.error(
-        "This version of tslib is not compatible with awesome-typescript. Please upgrade to the latest release."
+        "This version of tslib is not compatible with Awesome TypeScript. Please upgrade to the latest release."
       );
       exit();
     }

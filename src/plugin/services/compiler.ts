@@ -2,9 +2,9 @@ import type { Plugin } from "..";
 import type typescript from "typescript";
 
 import { lt } from "semver";
-import { exit } from "../util/process";
-import { apply } from "../util/ansi";
-import { isPath, isRelative } from "../util/path";
+import { exit } from "../../util/process";
+import { apply } from "../../util/ansi";
+import { isDistinct, isRelative } from "../../util/path";
 import { join, resolve } from "path";
 
 export class Compiler {
@@ -33,7 +33,7 @@ export class Compiler {
     else title += apply(this.name, "yellow") + (this.version ? " v" + this.version : "");
     final.push(title);
 
-    if (!this.supported) final.push(apply("   This compiler may not be compatible with awesome-typescript", "grey"));
+    if (!this.supported) final.push(apply("   This compiler may not be compatible with Awesome TypeScript", "grey"));
 
     return final;
   }
@@ -48,7 +48,7 @@ export class Compiler {
     try {
       path = require.resolve(input);
     } catch {
-      if (isPath(input)) logger.error({ message: "Could not find the specified compiler.", path: input });
+      if (isDistinct(input)) logger.error({ message: "Could not find the specified compiler.", path: input });
       logger.error({ message: `Could not find the specified compiler "${input}".` });
       exit();
     }
@@ -63,9 +63,9 @@ export class Compiler {
 
     let { name, version } = config;
     if (name !== "typescript") return [path, name, version];
-    if (typeof version !== "string" || lt(version, "4.7.0")) {
+    if (typeof version !== "string" || lt(version, "4.5.0")) {
       logger.error(
-        "This version of TypeScript is not compatible with awesome-typescript. Please upgrade to the latest release."
+        "This version of TypeScript is not compatible with Awesome TypeScript. Please upgrade to the latest release."
       );
       exit();
     }

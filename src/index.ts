@@ -6,7 +6,7 @@ import { Plugin } from "./plugin";
 export function awesomeTypescript(options?: Options): RollupPlugin {
   let plugin = new Plugin(options ?? {});
   return {
-    name: "awesome-typescript",
+    name: "Awesome TypeScript",
     watchChange: (id, change) => plugin.watcher.register(id, change.event),
     buildStart: function () {
       return plugin.handleStart(this);
