@@ -5,10 +5,17 @@
 
 A plugin to make TypeScript development using Rollup fun again:
 
-- Beautiful, detailed error messages
-- Watches all imported files (including type-only imports and ambient modules)
-- Blazing fast recompilations using incremental builds
-- Resolves path aliases specified in the TSConfig
+- **Blazing fast rebuilds**  
+  Uses incremental builds to only ever recompile and reevaluate changed files.
+- **Awesome watch mode**  
+  Monitors all contributing files, including type-only imports and ambient
+  modules.
+- **Detailed error messages**  
+  Displays the erroneous code and its surroundings to provide more context
+  on what went wrong.
+- **Monorepo ready**  
+  Watches extended configuration files, supports project references and
+  automatically resolves path aliases.
 
 <br>
 

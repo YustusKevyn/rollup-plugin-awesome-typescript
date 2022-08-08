@@ -1,6 +1,8 @@
 import type { Plugin } from "..";
 import type { ChangeEvent } from "rollup";
 
+import { some } from "../../util/data";
+
 export class Watcher {
   private pending: Map<string, ChangeEvent> = new Map();
 
@@ -18,14 +20,14 @@ export class Watcher {
 
     // Config
     let config = this.plugin.config;
-    if (pending.has(config.path) || config.extends.some(path => pending.has(path))) config.update();
+    if (some(this.plugin.filter.configs, path => pending.has(path))) config.update();
     else config.updateRootFiles();
 
     // Program
     if (pending.size) {
       for (let [path, event] of pending) {
         if (event === "delete") this.plugin.program.removeFile(path);
-        else if (this.plugin.filter.includes(path)) this.plugin.program.updateFile(path);
+        else if (this.plugin.filter.files.has(path)) this.plugin.program.updateFile(path);
       }
       this.plugin.program.update();
     }

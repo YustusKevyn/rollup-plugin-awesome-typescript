@@ -9,7 +9,7 @@ import { dirname, isAbsolute, join, resolve } from "path";
 import { isCaseSensitive } from "../../../util/fs";
 
 export class Config {
-  readonly path: string;
+  private path: string;
   private base: string;
 
   private host: ParseConfigHost;
@@ -28,34 +28,28 @@ export class Config {
     this.load();
   }
 
+  public get header() {
+    return [` • Using configuration at ${this.plugin.logger.formatPath(this.path)}`];
+  }
+
   public get options() {
     return this.state.options;
-  }
-
-  public get rootFiles() {
-    return this.state.rootFiles;
-  }
-
-  public get extends() {
-    return this.state.extends;
-  }
-
-  public get references() {
-    return this.state.references;
   }
 
   public get target() {
     return this.state.target;
   }
 
-  public get header() {
-    return [` • Using configuration at ${this.plugin.logger.formatPath(this.path)}`];
+  public get references() {
+    return this.state.references;
   }
 
-  public check() {
-    for (let info of this.diagnostics.infos) this.plugin.logger.info(info);
-    for (let warning of this.diagnostics.warnings) this.plugin.logger.warn(warning);
-    for (let error of this.diagnostics.errors) this.plugin.logger.error(error);
+  public get rootFiles() {
+    return this.state.rootFiles;
+  }
+
+  public get configFiles() {
+    return this.state.configFiles;
   }
 
   private find() {
@@ -106,20 +100,20 @@ export class Config {
     // Parse
     let config = compiler.parseJsonSourceFileConfigFileContent(source, this.host, this.base);
     for (let error of config.errors) this.diagnostics.errors.push(logger.diagnostics.getRecord(error));
-    this.normalise(config.options);
+    this.normalizeOptions(config.options);
 
     // Save
     this.state = {
       source,
-      options: config.options,
       target: compiler.getEmitScriptTarget(config.options),
-      extends: source.extendedSourceFiles ?? [],
+      options: config.options,
+      references: config.projectReferences ?? [],
       rootFiles: config.fileNames,
-      references: config.projectReferences ?? []
+      configFiles: [this.path, ...(source.extendedSourceFiles ?? [])]
     };
   }
 
-  private normalise(options: CompilerOptions) {
+  private normalizeOptions(options: CompilerOptions) {
     let { buildInfo, declarations } = this.plugin.options,
       compiler = this.plugin.compiler.instance;
 
@@ -129,7 +123,7 @@ export class Config {
     options.noEmitHelpers = false;
     options.noResolve = false;
     options.incremental = true;
-    options.skipLibCheck = true;
+    // options.skipLibCheck = true;
     options.importHelpers = true;
     options.inlineSourceMap = false;
 
@@ -159,20 +153,21 @@ export class Config {
 
     // Declarations
     if (declarations !== undefined) {
-      options.declaration = declarations !== false;
-
       if (typeof declarations === "string") {
+        options.declaration = true;
         if (isAbsolute(declarations)) options.declarationDir = declarations;
         else options.declarationDir = resolve(this.plugin.cwd, declarations);
       } else if (declarations === true && options.declarationDir === undefined) {
+        options.declaration = false;
         this.diagnostics.warnings.push({
           message:
             'The output of declaration files is disabled. Although "declarations" is set to `true` in the plugin options, no output directory was specified.',
           description:
             'Specify "declarationDir" in the TSConfig or replace "declarations" in the plugin options with an output directory.'
         });
-      }
+      } else options.declaration = declarations;
     } else if (options.declaration === true && options.declarationDir === undefined) {
+      options.declaration = false;
       this.diagnostics.warnings.push({
         message:
           'The output of declaration files is disabled. Although "declaration" is set to `true` in the TSConfig, no output directory was specified.',
@@ -223,8 +218,24 @@ export class Config {
       this.host,
       []
     );
-    this.plugin.filter.update();
+    this.plugin.filter.updateFiles();
     this.plugin.program.update();
+  }
+
+  public check() {
+    for (let info of this.diagnostics.infos) this.plugin.logger.info(info);
+    for (let warning of this.diagnostics.warnings) this.plugin.logger.warn(warning);
+    for (let error of this.diagnostics.errors) this.plugin.logger.error(error);
+  }
+
+  private createHost(): ParseConfigHost {
+    let sys = this.plugin.compiler.instance.sys;
+    return {
+      fileExists: sys.fileExists,
+      readDirectory: sys.readDirectory,
+      readFile: sys.readFile,
+      useCaseSensitiveFileNames: isCaseSensitive
+    };
   }
 
   private getSupportedModuleKinds() {
@@ -236,15 +247,5 @@ export class Config {
       if (value >= ModuleKind.ES2015 && value <= ModuleKind.ESNext) final.push(value);
     }
     return final;
-  }
-
-  private createHost(): ParseConfigHost {
-    let sys = this.plugin.compiler.instance.sys;
-    return {
-      fileExists: sys.fileExists,
-      readDirectory: sys.readDirectory,
-      readFile: sys.readFile,
-      useCaseSensitiveFileNames: isCaseSensitive
-    };
   }
 }

@@ -1,3 +1,8 @@
+export function some<T>(iterable: Iterable<T>, fn: (value: T) => boolean) {
+  for (let value of iterable) if (fn(value)) return true;
+  return false;
+}
+
 export function compareArrays(a: Readonly<any[]>, b: Readonly<any[]>) {
   if (Object.is(a, b)) return true;
   if (a.length !== b.length) return false;

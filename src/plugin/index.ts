@@ -54,13 +54,13 @@ export class Plugin {
     if (!origin) return null;
 
     let path = this.resolver.resolvePath(id, origin);
-    if (!path || !this.filter.includes(path)) return null;
+    if (!path || !this.filter.files.has(path)) return null;
     return trueCase(path);
   }
 
   public process(id: string) {
     let path = this.resolver.toPath(id);
-    if (!this.filter.includes(path)) return null;
+    if (!this.filter.files.has(path)) return null;
 
     // Output
     let output = this.program.getOutput(path);
@@ -86,23 +86,24 @@ export class Plugin {
     );
     this.watcher.update();
 
-    context.addWatchFile(trueCase(this.config.path));
-    for (let path of this.config.extends) context.addWatchFile(trueCase(path));
+    for (let path of this.filter.configs) context.addWatchFile(trueCase(path));
   }
 
   public handleEnd(context: PluginContext) {
     let files: Set<string> = new Set();
     for (let id of context.getModuleIds()) {
       let path = this.resolver.toPath(id);
-      if (files.has(path) || !this.filter.includes(path)) continue;
+      if (files.has(path) || !this.filter.files.has(path)) continue;
       files.add(path);
 
       let queue: string[] = [path];
       while (queue.length) {
         let current = queue.pop()!,
           dependencies = this.program.getDependencies(current);
+        if (!dependencies) continue;
+
         for (let dependency of dependencies) {
-          if (files.has(dependency)) continue;
+          if (files.has(dependency) || !this.filter.files.has(path)) continue;
           queue.push(dependency);
           files.add(dependency);
           context.addWatchFile(trueCase(dependency));

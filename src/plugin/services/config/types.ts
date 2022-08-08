@@ -1,5 +1,5 @@
-import type { CompilerOptions, ProjectReference, ScriptTarget, TsConfigSourceFile } from "typescript";
 import type { LoggerRecord } from "../logger";
+import type { CompilerOptions, ProjectReference, ScriptTarget, TsConfigSourceFile } from "typescript";
 
 export interface Diagnostics {
   infos: LoggerRecord[];
@@ -8,10 +8,10 @@ export interface Diagnostics {
 }
 
 export interface State {
-  target: ScriptTarget;
   source: TsConfigSourceFile;
-  extends: string[];
   options: CompilerOptions;
-  rootFiles: string[];
+  target: ScriptTarget;
   references: Readonly<ProjectReference[]>;
+  rootFiles: string[];
+  configFiles: string[];
 }

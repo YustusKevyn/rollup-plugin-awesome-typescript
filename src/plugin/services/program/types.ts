@@ -20,6 +20,7 @@ export interface ExistingFile extends GenericFile {
 
 export interface Build {
   output: Output;
+  dependencies: Set<string>;
 }
 
 export interface Output {

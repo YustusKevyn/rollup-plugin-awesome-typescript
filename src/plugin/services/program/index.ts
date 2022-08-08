@@ -16,11 +16,11 @@ export class Program {
   private files: Map<string, File> = new Map();
 
   private host: CompilerHost;
-  public builder: EmitAndSemanticDiagnosticsBuilderProgram;
+  public builder!: EmitAndSemanticDiagnosticsBuilderProgram;
 
   constructor(private plugin: Plugin) {
     this.host = this.createHost();
-    this.builder = this.createBuilder();
+    this.update();
   }
 
   private getFile(path: string) {
@@ -74,12 +74,20 @@ export class Program {
         else if (path.endsWith(".d.ts.map")) output.declarationMap = text;
       };
 
-    // Diagnostics
     let { diagnostics } = this.builder.emit(file.source, writeFile);
     if (diagnostics) this.plugin.logger.diagnostics.print(diagnostics);
 
+    // Dependencies
+    let references = this.builder.getState().referencedMap!.getValues(file.source.resolvedPath),
+      dependencies: Set<string> = new Set();
+
+    if (references) {
+      let iterator = references.keys();
+      for (let next = iterator.next(); !next.done; next = iterator.next()) dependencies.add(next.value);
+    }
+
     // Save
-    return (file.build = { output });
+    return (file.build = { output, dependencies });
   }
 
   public removeFile(path: string) {
@@ -120,20 +128,10 @@ export class Program {
   }
 
   public getDependencies(path: string) {
-    let file = this.getFile(path),
-      dependencies: Set<string> = new Set();
-    if (file.kind !== FileKind.Existing) return dependencies;
-    if (!file.build) this.compileFile(path);
-
-    let state = this.builder.getState(),
-      references = state.referencedMap!.getValues(file.source.resolvedPath);
-    if (!references) return dependencies;
-
-    let iterator = references.keys();
-    for (let next = iterator.next(); !next.done; next = iterator.next()) {
-      if (this.plugin.filter.includes(next.value)) dependencies.add(next.value);
-    }
-    return dependencies;
+    let file = this.getFile(path);
+    if (file.kind !== FileKind.Existing) return null;
+    if (file.build) return file.build.dependencies;
+    return this.compileFile(path).dependencies;
   }
 
   private createHost(): CompilerHost {
@@ -172,7 +170,7 @@ export class Program {
   }
 
   private isBuilderUpToDate() {
-    let program = this.builder.getProgramOrUndefined();
+    let program = this.builder?.getProgramOrUndefined();
     if (!program) return false;
 
     // Compiler options
@@ -192,23 +190,27 @@ export class Program {
   }
 
   public update() {
-    console.log(this.isBuilderUpToDate());
-    while (this.builder.getSemanticDiagnosticsOfNextAffectedFile());
     if (!this.isBuilderUpToDate()) this.builder = this.createBuilder();
+    while (this.builder.getSemanticDiagnosticsOfNextAffectedFile());
   }
 
   public check(files: Set<string>) {
-    let syntacticDiagnostics = [],
+    let declarationDiagnostics = [],
+      syntacticDiagnostics = [],
       semanticDiagnostics = [];
+
     for (let path of files) {
       let source = this.getSource(path);
       if (!source) continue;
 
+      declarationDiagnostics.push(...this.builder.getDeclarationDiagnostics(source));
       syntacticDiagnostics.push(...this.builder.getSyntacticDiagnostics(source));
       semanticDiagnostics.push(...this.builder.getSemanticDiagnostics(source));
     }
 
     let logger = this.plugin.logger;
+    logger.diagnostics.print(this.builder.getGlobalDiagnostics());
+    logger.diagnostics.print(declarationDiagnostics);
     logger.diagnostics.print(syntacticDiagnostics);
     logger.diagnostics.print(semanticDiagnostics);
   }
