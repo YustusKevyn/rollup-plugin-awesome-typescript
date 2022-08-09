@@ -18,7 +18,7 @@ export class Resolver {
   }
 
   public resolve(id: string, origin: string) {
-    return this.plugin.compiler.instance.nodeModuleNameResolver(
+    return this.plugin.compiler.instance.resolveModuleName(
       id,
       origin,
       this.plugin.config.options,

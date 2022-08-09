@@ -28,8 +28,8 @@ export class Plugin {
   readonly filter: Filter;
   readonly watcher: Watcher;
 
-  readonly program: Program;
   readonly emitter: Emitter;
+  readonly program: Program;
 
   constructor(readonly options: Options) {
     if (options.cwd) this.cwd = normalize(options.cwd, this.cwd);
@@ -45,8 +45,8 @@ export class Plugin {
     this.filter = new Filter(this);
     this.watcher = new Watcher(this);
 
-    this.program = new Program(this);
     this.emitter = new Emitter(this);
+    this.program = new Program(this);
   }
 
   public resolve(id: string, origin?: string) {
@@ -63,7 +63,7 @@ export class Plugin {
     if (!this.filter.files.has(path)) return null;
 
     // Output
-    let output = this.program.getOutput(path);
+    let output = this.program.getBuild(path)?.output;
     if (!output?.code) return null;
 
     // Result
@@ -90,6 +90,10 @@ export class Plugin {
   }
 
   public handleEnd(context: PluginContext) {
+    for (let path of this.program.declarations) {
+      if (this.filter.files.has(path)) context.addWatchFile(path);
+    }
+
     let files: Set<string> = new Set();
     for (let id of context.getModuleIds()) {
       let path = this.resolver.toPath(id);
@@ -99,20 +103,20 @@ export class Plugin {
       let queue: string[] = [path];
       while (queue.length) {
         let current = queue.pop()!,
-          dependencies = this.program.getDependencies(current);
+          dependencies = this.program.getBuild(current)?.dependencies;
         if (!dependencies) continue;
 
         for (let dependency of dependencies) {
-          if (files.has(dependency) || !this.filter.files.has(path)) continue;
-          queue.push(dependency);
+          if (files.has(dependency) || !this.filter.files.has(dependency)) continue;
           files.add(dependency);
+          queue.push(dependency);
           context.addWatchFile(trueCase(dependency));
         }
       }
     }
 
     this.config.check();
-    this.program.check(files);
+    // this.program.check(files);
     this.emitter.emit(files);
   }
 }

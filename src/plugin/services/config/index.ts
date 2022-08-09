@@ -123,20 +123,12 @@ export class Config {
     options.noEmitHelpers = false;
     options.noResolve = false;
     options.incremental = true;
-    // options.skipLibCheck = true;
     options.importHelpers = true;
+    options.isolatedModules = true;
     options.inlineSourceMap = false;
 
-    // Resolution
-    // if (options.moduleResolution === compiler.ModuleResolutionKind.Classic) {
-    //   this.diagnostics.errors.push({
-    //     message: `Unsupported module resolution kind: ${compiler.ModuleKind[options.moduleResolution]}.`,
-    //     description: [
-    //       "Rollup requires TypeScript to produce files using the ES Modules syntax.",
-    //       `Set "module" in the TSConfig to one of the available ES Modules options: ${names}.`
-    //     ]
-    //   });
-    // }
+    delete options.out;
+    delete options.outFile;
 
     // Module
     if (options.module === undefined) options.module = compiler.ModuleKind.ESNext;
@@ -157,22 +149,22 @@ export class Config {
         options.declaration = true;
         if (isAbsolute(declarations)) options.declarationDir = declarations;
         else options.declarationDir = resolve(this.plugin.cwd, declarations);
-      } else if (declarations === true && options.declarationDir === undefined) {
+      } else if (declarations === true && options.declarationDir === undefined && options.outDir === undefined) {
         options.declaration = false;
         this.diagnostics.warnings.push({
           message:
             'The output of declaration files is disabled. Although "declarations" is set to `true` in the plugin options, no output directory was specified.',
           description:
-            'Specify "declarationDir" in the TSConfig or replace "declarations" in the plugin options with an output directory.'
+            'Specify "outDir" or "declarationDir" in the TSConfig or replace "declarations" in the plugin options with an output directory.'
         });
       } else options.declaration = declarations;
-    } else if (options.declaration === true && options.declarationDir === undefined) {
+    } else if (options.declaration === true && options.declarationDir === undefined && options.outDir === undefined) {
       options.declaration = false;
       this.diagnostics.warnings.push({
         message:
           'The output of declaration files is disabled. Although "declaration" is set to `true` in the TSConfig, no output directory was specified.',
         description: [
-          'Specify an output directory using "declarationDir" in the TSConfig or "declarations" in the plugin options.',
+          'Specify an output directory using "declarationDir" or "outDir" in the TSConfig or "declarations" in the plugin options.',
           'You can silence this warning by explicitly setting "declarations" to `false` in the plugin options.'
         ]
       });

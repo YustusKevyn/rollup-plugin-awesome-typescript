@@ -8,11 +8,6 @@ export class Watcher {
 
   constructor(private plugin: Plugin) {}
 
-  public register(id: string, event: ChangeEvent) {
-    let path = this.plugin.resolver.toPath(id);
-    this.pending.set(path, event);
-  }
-
   public update() {
     if (!this.pending.size) return;
     let pending = this.pending;
@@ -24,12 +19,15 @@ export class Watcher {
     else config.updateRootFiles();
 
     // Program
-    if (pending.size) {
-      for (let [path, event] of pending) {
-        if (event === "delete") this.plugin.program.removeFile(path);
-        else if (this.plugin.filter.files.has(path)) this.plugin.program.updateFile(path);
-      }
-      this.plugin.program.update();
+    for (let [path, event] of pending) {
+      if (event === "delete") this.plugin.program.removeFile(path);
+      else if (this.plugin.filter.files.has(path)) this.plugin.program.updateFile(path);
     }
+    this.plugin.program.update();
+  }
+
+  public register(id: string, event: ChangeEvent) {
+    let path = this.plugin.resolver.toPath(id);
+    this.pending.set(path, event);
   }
 }
