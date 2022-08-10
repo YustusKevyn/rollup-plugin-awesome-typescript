@@ -38,24 +38,24 @@ export class Diagnostics {
   private getSnippet(source: SourceFile, index: number, length: number) {
     const contextLines = 2,
       placeholderLines = 2,
-      maxErrorLines = 8;
+      maxHighlightLines = 8;
 
     let compiler = this.plugin.compiler.instance,
-      errorStart = compiler.getLineAndCharacterOfPosition(source, index),
-      errorEnd = compiler.getLineAndCharacterOfPosition(source, index + length),
-      errorLines = errorEnd.line - errorStart.line + 1,
+      highlightStart = compiler.getLineAndCharacterOfPosition(source, index),
+      highlightEnd = compiler.getLineAndCharacterOfPosition(source, index + length),
+      highlightLines = highlightEnd.line - highlightStart.line + 1,
       lastLine = compiler.getLineAndCharacterOfPosition(source, source.text.length).line,
-      startLine = Math.max(0, errorStart.line - contextLines),
-      endLine = Math.min(lastLine, errorEnd.line + contextLines),
+      startLine = Math.max(0, highlightStart.line - contextLines),
+      endLine = Math.min(lastLine, highlightEnd.line + contextLines),
       gutterWidth = (endLine + 1).toString().length,
       snippet: string[] = [];
 
     if (startLine - contextLines < 0) snippet.push(apply(" ".repeat(gutterWidth) + " ┬", "grey"));
     for (let i = startLine; i <= endLine; i++) {
-      if (errorLines > maxErrorLines && i === errorStart.line + placeholderLines + 1) {
+      if (highlightLines > maxHighlightLines && i === highlightStart.line + placeholderLines + 1) {
         let hidden = apply(" ".repeat(gutterWidth) + " ╎", "grey");
         for (let j = 0; j < placeholderLines; j++) snippet.push(hidden);
-        i = errorEnd.line - placeholderLines;
+        i = highlightEnd.line - placeholderLines;
       }
 
       let lineStart = compiler.getPositionOfLineAndCharacter(source, i, 0),
@@ -63,10 +63,10 @@ export class Diagnostics {
         lineContent = source.text.slice(lineStart, lineEnd).trimEnd(),
         final = apply((i + 1).toString().padStart(gutterWidth) + " │ ", "grey") + " ";
 
-      if (i < errorStart.line || i > errorEnd.line) final += apply(lineContent, "dim");
+      if (i < highlightStart.line || i > highlightEnd.line) final += apply(lineContent, "dim");
       else {
-        let lineErrorStart = i === errorStart.line ? errorStart.character : 0,
-          lineErrorEnd = i === errorEnd.line ? errorEnd.character : lineContent.length;
+        let lineErrorStart = i === highlightStart.line ? highlightStart.character : 0,
+          lineErrorEnd = i === highlightEnd.line ? highlightEnd.character : lineContent.length;
 
         final += apply(lineContent.slice(0, lineErrorStart), "dim");
         final += apply(lineContent.slice(lineErrorStart, lineErrorEnd), "brightWhite", "bold", "italic");

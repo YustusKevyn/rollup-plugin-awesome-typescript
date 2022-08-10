@@ -1,18 +1,17 @@
 import type { Plugin } from "..";
 
-import { normalizeCase } from "../../util/path";
-import { directoryExists } from "../../util/fs";
-import { mkdirSync, writeFileSync } from "fs";
-import { dirname, join, relative } from "path";
+import { writeFileSync } from "fs";
 
 export class Emitter {
   constructor(private plugin: Plugin) {}
 
-  emit(files: Set<string>) {
+  public init() {}
+
+  public emit(files: Set<string>) {
     this.emitBuildInfo();
   }
 
-  emitBuildInfo() {
+  public emitBuildInfo() {
     let { diagnostics } = this.plugin.program.builder.emitBuildInfo((path, text) => writeFileSync(path, text, "utf-8"));
     if (diagnostics) this.plugin.logger.diagnostics.print(diagnostics);
   }

@@ -1,5 +1,12 @@
 import type { LoggerRecord } from "../logger";
-import type { CompilerOptions, ProjectReference, ScriptTarget, TsConfigSourceFile } from "typescript";
+import type {
+  CompilerOptions,
+  ModuleKind,
+  ParseConfigHost,
+  ProjectReference,
+  ScriptTarget,
+  TsConfigSourceFile
+} from "typescript";
 
 export interface Diagnostics {
   infos: LoggerRecord[];
@@ -8,10 +15,17 @@ export interface Diagnostics {
 }
 
 export interface State {
+  path: string;
+  base: string;
+  host: ParseConfigHost;
+  supportedModuleKinds: ModuleKind[];
+}
+
+export interface Store {
   source: TsConfigSourceFile;
   options: CompilerOptions;
   target: ScriptTarget;
   references: Readonly<ProjectReference[]>;
-  rootFiles: string[];
-  configFiles: string[];
+  rootFileNames: string[];
+  configFileNames: string[];
 }

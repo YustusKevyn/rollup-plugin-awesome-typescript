@@ -28,4 +28,10 @@ export interface Output {
   codeMap?: string;
   declaration?: string;
   declarationMap?: string;
+  json?: string;
+}
+
+export interface FilesByType {
+  json: Set<string>;
+  declaration: Set<string>;
 }

@@ -1,70 +1,92 @@
 import type { Plugin } from "../..";
-
+import type { Diagnostics, State, Store } from "./types";
 import type { CompilerOptions, ModuleKind, ParseConfigHost } from "typescript";
-import type { State, Diagnostics } from "./types";
 
-import { exit } from "../../../util/process";
-import { isPath, normalize } from "../../../util/path";
 import { dirname, isAbsolute, join, resolve } from "path";
-import { isCaseSensitive } from "../../../util/fs";
+import { concat } from "../../../util/data";
+import { isPath, normalize } from "../../../util/path";
+import { fileExists, isCaseSensitive } from "../../../util/fs";
 
 export class Config {
-  private path: string;
-  private base: string;
-
-  private host: ParseConfigHost;
-  private supportedModuleKinds: ModuleKind[];
-
   private state!: State;
+  private store!: Store;
   private diagnostics!: Diagnostics;
 
-  constructor(private plugin: Plugin) {
-    this.path = normalize(this.find());
-    this.base = this.plugin.context ?? dirname(this.path);
-
-    this.host = this.createHost();
-    this.supportedModuleKinds = this.getSupportedModuleKinds();
-
-    this.load();
-  }
-
-  public get header() {
-    return [` • Using configuration at ${this.plugin.logger.formatPath(this.path)}`];
-  }
+  constructor(private plugin: Plugin) {}
 
   public get options() {
-    return this.state.options;
+    return this.store.options;
   }
 
   public get target() {
-    return this.state.target;
+    return this.store.target;
   }
 
   public get references() {
-    return this.state.references;
+    return this.store.references;
   }
 
-  public get rootFiles() {
-    return this.state.rootFiles;
+  public get configFileNames() {
+    return this.store.configFileNames;
   }
 
-  public get configFiles() {
-    return this.state.configFiles;
+  public get rootFileNames() {
+    return this.store.rootFileNames;
   }
 
-  private find() {
+  public init() {
+    if (!this.state && !this.load()) return false;
+
+    this.plugin.logger.log(` • Using TSConfig at ${this.plugin.logger.formatPath(this.state.path)}`);
+    return true;
+  }
+
+  public check() {
+    for (let info of this.diagnostics.infos) this.plugin.logger.info(info);
+    for (let warning of this.diagnostics.warnings) this.plugin.logger.warn(warning);
+    for (let error of this.diagnostics.errors) this.plugin.logger.error(error);
+  }
+
+  public update() {
+    let compiler = this.plugin.compiler.instance,
+      oldOptions = this.store.options;
+
+    if (!fileExists(this.state.path)) {
+      this.diagnostics.errors.push({ message: "Configuration file does not exist anymore.", path: this.state.path });
+      return;
+    }
+
+    this.load();
+    this.plugin.files.update();
+    if (compiler.changesAffectModuleResolution(oldOptions, this.store.options)) this.plugin.resolver.update();
+    this.plugin.program.update();
+  }
+
+  public updateRootFiles() {
+    let compiler = this.plugin.compiler.instance;
+    this.store.rootFileNames = compiler.getFileNamesFromConfigSpecs(
+      this.store.source.configFileSpecs!,
+      this.state.base,
+      this.store.options,
+      this.state.host,
+      []
+    );
+    this.plugin.files.updateScripts();
+    this.plugin.program.update();
+  }
+
+  private load() {
     let input = this.plugin.options.config ?? "tsconfig.json",
-      compiler = this.plugin.compiler.instance,
-      logger = this.plugin.logger;
+      logger = this.plugin.logger,
+      path;
 
     // Path
     if (isPath(input)) {
-      let path = !isAbsolute(input) ? resolve(this.plugin.cwd, input) : input;
-      if (!compiler.sys.fileExists(path)) {
-        logger.error({ message: "Configuration file does not exists.", path: path });
-        exit();
+      path = !isAbsolute(input) ? resolve(this.plugin.cwd, input) : input;
+      if (!fileExists(path)) {
+        logger.error({ message: "TSConfig file does not exist.", path: path });
+        return false;
       }
-      return path;
     }
 
     // Filename
@@ -73,47 +95,55 @@ export class Config {
         parent = dirname(dir);
 
       while (dir !== parent) {
-        let path = join(dir, input);
-        if (compiler.sys.fileExists(path)) return path;
+        let check = join(dir, input);
+        if (fileExists(check)) {
+          path = check;
+          break;
+        }
 
         dir = parent;
         parent = dirname(dir);
       }
 
-      logger.error(`Configuration file with name "${input}" does not exist in directory tree.`);
-      exit();
+      if (!path) {
+        logger.error(`TSConfig file with name "${input}" does not exist in directory tree.`);
+        return false;
+      }
     }
+
+    // Save
+    this.state = {
+      path: normalize(path),
+      base: this.plugin.context ?? dirname(path),
+      host: this.createHost(),
+      supportedModuleKinds: this.getSupportedModuleKinds()
+    };
+    this.parse();
+    return true;
   }
 
-  private load() {
+  private parse() {
     let logger = this.plugin.logger,
       compiler = this.plugin.compiler.instance;
     this.diagnostics = { errors: [], warnings: [], infos: [] };
 
-    // Read
-    let source = compiler.readJsonConfigFile(this.path, compiler.sys.readFile);
-    if (!source) {
-      logger.error({ message: "Failed to read configuration.", path: this.path });
-      exit();
-    }
-
-    // Parse
-    let config = compiler.parseJsonSourceFileConfigFileContent(source, this.host, this.base);
+    let source = compiler.readJsonConfigFile(this.state.path, compiler.sys.readFile),
+      config = compiler.parseJsonSourceFileConfigFileContent(source, this.state.host, this.state.base);
     for (let error of config.errors) this.diagnostics.errors.push(logger.diagnostics.getRecord(error));
-    this.normalizeOptions(config.options);
+    this.normalize(config.options);
 
     // Save
-    this.state = {
+    this.store = {
       source,
       target: compiler.getEmitScriptTarget(config.options),
       options: config.options,
       references: config.projectReferences ?? [],
-      rootFiles: config.fileNames,
-      configFiles: [this.path, ...(source.extendedSourceFiles ?? [])]
+      rootFileNames: config.fileNames,
+      configFileNames: concat([this.state.path], source.extendedSourceFiles)
     };
   }
 
-  private normalizeOptions(options: CompilerOptions) {
+  private normalize(options: CompilerOptions) {
     let { buildInfo, declarations } = this.plugin.options,
       compiler = this.plugin.compiler.instance;
 
@@ -132,8 +162,8 @@ export class Config {
 
     // Module
     if (options.module === undefined) options.module = compiler.ModuleKind.ESNext;
-    else if (!this.supportedModuleKinds.includes(options.module)) {
-      let names = this.supportedModuleKinds.map(kind => compiler.ModuleKind[kind]).join(", ");
+    else if (!this.state.supportedModuleKinds.includes(options.module)) {
+      let names = this.state.supportedModuleKinds.map(kind => compiler.ModuleKind[kind]).join(", ");
       this.diagnostics.errors.push({
         message: `Unsupported module kind: ${compiler.ModuleKind[options.module]}.`,
         description: [
@@ -189,35 +219,6 @@ export class Config {
         ]
       });
     }
-  }
-
-  public update() {
-    let compiler = this.plugin.compiler.instance,
-      oldOptions = this.state.options;
-
-    this.load();
-    this.plugin.filter.update();
-    if (compiler.changesAffectModuleResolution(oldOptions, this.state.options)) this.plugin.resolver.update();
-    this.plugin.program.update();
-  }
-
-  public updateRootFiles() {
-    let compiler = this.plugin.compiler.instance;
-    this.state.rootFiles = compiler.getFileNamesFromConfigSpecs(
-      this.state.source.configFileSpecs!,
-      this.base,
-      this.state.options,
-      this.host,
-      []
-    );
-    this.plugin.filter.updateFiles();
-    this.plugin.program.update();
-  }
-
-  public check() {
-    for (let info of this.diagnostics.infos) this.plugin.logger.info(info);
-    for (let warning of this.diagnostics.warnings) this.plugin.logger.warn(warning);
-    for (let error of this.diagnostics.errors) this.plugin.logger.error(error);
   }
 
   private createHost(): ParseConfigHost {

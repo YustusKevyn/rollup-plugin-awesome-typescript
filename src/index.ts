@@ -8,17 +8,17 @@ export function awesomeTypescript(options?: Options): RollupPlugin {
   return {
     name: "Awesome TypeScript",
     watchChange: (id, change) => plugin.watcher.register(id, change.event),
+    options: () => plugin.init(),
     buildStart: function () {
-      return plugin.handleStart(this);
+      return plugin.start(this);
     },
     resolveId: (id, origin) => plugin.resolve(id, origin),
     load: id => plugin.process(id),
     buildEnd: function () {
-      // @ts-ignore
-      let graph = this.parse.__this;
-      return plugin.handleEnd({
+      return plugin.end({
         ...this,
-        addWatchFile: id => (graph.watchFiles[id] = true)
+        // @ts-ignore
+        addWatchFile: id => (this.parse.__this.watchFiles[id] = true)
       });
     }
   };

@@ -3,8 +3,10 @@ import type { Position, Record } from "./types";
 
 import { Diagnostics } from "./diagnostics";
 
-import { apply } from "../../../util/ansi";
 import { relative } from "path";
+import { apply } from "../../../util/ansi";
+import { concat } from "../../../util/data";
+import { normalize } from "../../../util/path";
 
 enum Level {
   Error,
@@ -23,7 +25,7 @@ export class Logger {
     this.diagnostics = new Diagnostics(this, plugin);
   }
 
-  public log(arg: string | string[], level: Level) {
+  public log(arg: string | string[], level: Level = Level.Info) {
     if (this.level < level && level !== Level.Error) return;
     if (typeof arg === "string") arg = arg.split("\n");
     console.log(arg.join(this.newLine));
@@ -77,7 +79,7 @@ export class Logger {
   }
 
   public formatPath(path: string) {
-    return apply(relative(this.plugin.cwd, path), "cyan", "underline");
+    return apply(relative(this.plugin.cwd, normalize(path)), "cyan", "underline");
   }
 
   private formatLocation(path: string, position?: Position) {
@@ -100,11 +102,11 @@ export class Logger {
     if (record.path) final.push(this.formatLocation(record.path, record.position));
     if (record.description) {
       let description = typeof record.description === "string" ? record.description.split("\n") : record.description;
-      final.push(...description);
+      concat(final, description);
     }
     if (record.snippet) {
       let snippet = typeof record.snippet === "string" ? record.snippet.split("\n") : record.snippet;
-      final.push(this.padding, ...snippet);
+      concat(final, this.padding, snippet);
     }
     return final.length ? this.newLine + this.applyIndentation(final, indentation) : "";
   }

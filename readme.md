@@ -12,6 +12,9 @@ A plugin to make TypeScript development using Rollup fun again:
   Detailed and beautifully formatted error messages that display the erroneous
   code and its surroundings to provide more context on what went wrong.
 
+<!-- ZERO CONFIG DROP IN -->
+<!-- THIGHT TS CONFIG INTEGRATION: JSON, PATH ALIASES, FILTERS, DECLARATIONS... -->
+
 <!-- - **Blazing fast rebuilds**
   Uses incremental builds to only ever recompile and reevaluate changed files. -->
 <!-- - **Monorepo ready**

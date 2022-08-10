@@ -10,7 +10,7 @@ export interface Options {
 
   /**
    * Specifies the base path used to parse the TSConfig. Relative paths
-   * within the configuration are resolved with respect to this path.
+   * within the TSConfig are resolved with respect to this path.
    *
    * Defaults to the directory containing the TSConfig.
    */
@@ -47,6 +47,13 @@ export interface Options {
    * Default is `"typescript"`
    */
   compiler?: string | undefined;
+
+  /**
+   * Specifies whether to enable type checking.
+   *
+   * Default is `true`
+   */
+  check?: boolean | undefined;
 
   /**
    * Specifies if and where to store incremental compilation information. Can

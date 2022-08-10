@@ -5,12 +5,18 @@ import { normalizeCase } from "../../util/path";
 import { isCaseSensitive } from "../../util/fs";
 
 export class Resolver {
-  readonly host: ModuleResolutionHost;
-  readonly cache: ModuleResolutionCache;
+  public host!: ModuleResolutionHost;
+  public cache!: ModuleResolutionCache;
 
-  constructor(private plugin: Plugin) {
-    this.host = this.createHost();
-    this.cache = this.createCache();
+  constructor(private plugin: Plugin) {}
+
+  public init() {
+    (this.host = this.createHost()), (this.cache = this.createCache());
+  }
+
+  public update() {
+    this.cache.clear();
+    this.cache.update(this.plugin.config.options);
   }
 
   public toPath(id: string) {
@@ -51,10 +57,5 @@ export class Resolver {
       normalizeCase,
       this.plugin.config.options
     );
-  }
-
-  public update() {
-    this.cache.clear();
-    this.cache.update(this.plugin.config.options);
   }
 }
