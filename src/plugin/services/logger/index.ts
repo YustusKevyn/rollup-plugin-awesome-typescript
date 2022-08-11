@@ -1,88 +1,77 @@
 import type { Plugin } from "../..";
 import type { Position, Record } from "./types";
-
-import { Diagnostics } from "./diagnostics";
+import type { Color } from "../../../util/ansi";
 
 import { relative } from "path";
 import { apply } from "../../../util/ansi";
 import { concat } from "../../../util/data";
 import { normalize } from "../../../util/path";
+import { applyBackgroundColor } from "../../../util/ansi";
 
 enum Level {
   Error,
-  Warn,
+  Warning,
   Info,
-  Debug
+  Verbose
 }
 
 export class Logger {
-  readonly diagnostics: Diagnostics;
+  readonly PADDING = "";
 
-  readonly newLine = "\n";
-  readonly padding = "";
+  private level = Level.Info;
 
-  constructor(private plugin: Plugin, readonly level: Level) {
-    this.diagnostics = new Diagnostics(this, plugin);
+  constructor(private plugin: Plugin) {}
+
+  public log(message: string | string[], level: Level = Level.Info) {
+    if (level > this.level) return;
+    console.log(typeof message === "string" ? message : message.join("\n"));
   }
 
-  public log(arg: string | string[], level: Level = Level.Info) {
-    if (this.level < level && level !== Level.Error) return;
-    if (typeof arg === "string") arg = arg.split("\n");
-    console.log(arg.join(this.newLine));
+  public info(record: Record) {
+    this.log(this.format("INFO", "cyan", record), Level.Error);
   }
 
-  public error(record: Record | string) {
-    if (typeof record === "string") record = { message: record };
-
-    let final = this.newLine;
-    final += this.formatHeader(
-      record,
-      apply(" ERROR ", "brightWhite", "bgRed", "bold"),
-      apply(record.message, "red", "bold")
-    );
-    final += this.formatBody(record, 8) + this.newLine;
-    console.log(final);
+  public warn(record: Record) {
+    this.log(this.format("WARN", "yellow", record), Level.Error);
   }
 
-  public warn(record: Record | string) {
-    if (this.level < Level.Warn) return;
-    if (typeof record === "string") record = { message: record };
-
-    let final = this.newLine;
-    final += this.formatHeader(
-      record,
-      apply(" WARN ", "brightWhite", "bgYellow", "bold"),
-      apply(record.message, "yellow", "bold")
-    );
-    final += this.formatBody(record, 7) + this.newLine;
-    console.log(final);
+  public error(record: Record) {
+    this.log(this.format("ERROR", "red", record), Level.Error);
   }
 
-  public info(record: Record | string) {
-    if (this.level < Level.Info) return;
-    if (typeof record === "string") record = { message: record };
+  public format(label: string, color: Color, record: Record) {
+    let indentation = " ".repeat(label.length + 3),
+      description = typeof record.description === "string" ? [record.description] : record.description,
+      message = typeof record.message === "string" ? [record.message] : record.message,
+      final = [];
 
-    let final = this.newLine;
-    final += this.formatHeader(
-      record,
-      apply(" INFO ", "brightWhite", "bgCyan", "bold"),
-      apply(record.message, "cyan", "bold")
-    );
-    final += this.formatBody(record, 7) + this.newLine;
-    console.log(final);
-  }
+    // Message
+    let first = applyBackgroundColor(apply(" " + label + " ", "brightWhite", "bold"), color) + " ";
+    if (record.code) first += apply(" " + record.code + " ", "bgGrey", "white") + " ";
+    final.push(first + apply(message[0], color, "bold"));
+    for (let i = 1; i < message.length; i++) final.push(indentation + apply(message[i], color, "bold"));
 
-  public applyIndentation(arg: string | string[], indentation: number) {
-    if (typeof arg === "string") arg = arg.split("\n");
-    if (!indentation) return arg.join(this.newLine);
-    return arg.map(line => " ".repeat(indentation) + line).join(this.newLine);
+    // Location
+    if (record.path) final.push(indentation + this.formatLocation(record.path, record.position));
+
+    // Description
+    if (description?.length) {
+      concat(
+        final,
+        description.map(line => indentation + line)
+      );
+    }
+
+    // Finalize
+    final.push(this.PADDING);
+    return final;
   }
 
   public formatPath(path: string) {
     return apply(relative(this.plugin.cwd, normalize(path)), "cyan", "underline");
   }
 
-  private formatLocation(path: string, position?: Position) {
+  public formatLocation(path: string, position?: Position) {
     let final = "at " + this.formatPath(path);
     if (position) {
       final += ":" + apply(position.line + 1, "yellow");
@@ -90,27 +79,6 @@ export class Logger {
     }
     return final;
   }
-
-  private formatHeader(record: Record, prefix: string, title: string) {
-    let final = prefix;
-    if (record.code) final += apply(" " + record.code + " ", "bgGrey", "white");
-    return final + " " + title;
-  }
-
-  private formatBody(record: Record, indentation: number = 0) {
-    let final = [];
-    if (record.path) final.push(this.formatLocation(record.path, record.position));
-    if (record.description) {
-      let description = typeof record.description === "string" ? record.description.split("\n") : record.description;
-      concat(final, description);
-    }
-    if (record.snippet) {
-      let snippet = typeof record.snippet === "string" ? record.snippet.split("\n") : record.snippet;
-      concat(final, this.padding, snippet);
-    }
-    return final.length ? this.newLine + this.applyIndentation(final, indentation) : "";
-  }
 }
 
-export { Level as LoggerLevel };
 export type { Record as LoggerRecord };

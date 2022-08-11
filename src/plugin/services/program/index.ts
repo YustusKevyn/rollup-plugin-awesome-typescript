@@ -46,10 +46,9 @@ export class Program {
       concat(semanticDiagnostics, this.builder.getSemanticDiagnostics(source));
     }
 
-    let logger = this.plugin.logger;
-    logger.diagnostics.print(syntacticDiagnostics);
-    logger.diagnostics.print(semanticDiagnostics);
-    logger.diagnostics.print(this.builder.getGlobalDiagnostics());
+    this.plugin.diagnostics.print(syntacticDiagnostics);
+    this.plugin.diagnostics.print(semanticDiagnostics);
+    this.plugin.diagnostics.print(this.builder.getGlobalDiagnostics());
   }
 
   public getBuild(path: string) {
@@ -176,7 +175,7 @@ export class Program {
       else if (endsWith(outPath, ".d.ts.map")) build.output.declarationMap = text;
       else if (endsWith(outPath, ".json")) build.output.json = text;
     });
-    if (diagnostics) this.plugin.logger.diagnostics.print(diagnostics);
+    if (diagnostics) this.plugin.diagnostics.print(diagnostics);
 
     // Dependencies
     let references = this.builder.getState().referencedMap!.getValues(file.source.resolvedPath);

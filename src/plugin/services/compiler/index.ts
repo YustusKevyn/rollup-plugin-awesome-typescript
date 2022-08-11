@@ -59,9 +59,10 @@ export class Compiler {
 
     if (name === "typescript") {
       if (typeof version !== "string" || lt(version, "4.5.0")) {
-        logger.error(
-          "This version of TypeScript is not compatible with Awesome TypeScript. Please upgrade to the latest release."
-        );
+        logger.error({
+          message:
+            "This version of TypeScript is not compatible with Awesome TypeScript. Please upgrade to the latest release."
+        });
         return false;
       }
       supported = true;

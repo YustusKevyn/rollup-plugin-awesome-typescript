@@ -13,6 +13,6 @@ export class Emitter {
 
   public emitBuildInfo() {
     let { diagnostics } = this.plugin.program.builder.emitBuildInfo((path, text) => writeFileSync(path, text, "utf-8"));
-    if (diagnostics) this.plugin.logger.diagnostics.print(diagnostics);
+    if (diagnostics) this.plugin.diagnostics.print(diagnostics);
   }
 }

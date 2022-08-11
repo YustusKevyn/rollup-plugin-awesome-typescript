@@ -4,10 +4,11 @@ import type { LoadResult, PluginContext } from "rollup";
 
 import { Config } from "./services/config";
 import { Compiler } from "./services/compiler";
+import { Diagnostics } from "./services/diagnostics";
 import { Emitter } from "./emitter";
 import { Files } from "./services/files";
 import { Helpers } from "./services/helpers";
-import { Logger, LoggerLevel } from "./services/logger";
+import { Logger } from "./services/logger";
 import { Program } from "./services/program";
 import { Resolver } from "./services/resolver";
 import { Watcher } from "./services/watcher";
@@ -21,7 +22,8 @@ export class Plugin {
   readonly cwd: string = normalize(process.cwd());
   readonly context?: string;
 
-  readonly logger = new Logger(this, LoggerLevel.Info);
+  readonly logger = new Logger(this);
+  readonly diagnostics = new Diagnostics(this);
 
   readonly compiler = new Compiler(this);
   readonly helpers = new Helpers(this);
@@ -40,9 +42,9 @@ export class Plugin {
   }
 
   public init() {
-    this.logger.log([this.logger.padding, apply("Awesome TypeScript", "underline")]);
+    this.logger.log([this.logger.PADDING, apply("Awesome TypeScript", "underline")]);
     let core = this.compiler.init() && this.helpers.init() && this.config.init();
-    this.logger.log(this.logger.padding);
+    this.logger.log(this.logger.PADDING);
 
     if (!core) throw new Error();
     if (!this.state) {

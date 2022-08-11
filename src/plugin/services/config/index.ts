@@ -106,7 +106,7 @@ export class Config {
       }
 
       if (!path) {
-        logger.error(`TSConfig file with name "${input}" does not exist in directory tree.`);
+        logger.error({ message: `TSConfig file with name "${input}" does not exist in directory tree.` });
         return false;
       }
     }
@@ -123,13 +123,12 @@ export class Config {
   }
 
   private parse() {
-    let logger = this.plugin.logger,
-      compiler = this.plugin.compiler.instance;
+    let compiler = this.plugin.compiler.instance;
     this.diagnostics = { errors: [], warnings: [], infos: [] };
 
     let source = compiler.readJsonConfigFile(this.state.path, compiler.sys.readFile),
       config = compiler.parseJsonSourceFileConfigFileContent(source, this.state.host, this.state.base);
-    for (let error of config.errors) this.diagnostics.errors.push(logger.diagnostics.getRecord(error));
+    for (let error of config.errors) this.diagnostics.errors.push(this.plugin.diagnostics.toRecord(error));
     this.normalize(config.options);
 
     // Save

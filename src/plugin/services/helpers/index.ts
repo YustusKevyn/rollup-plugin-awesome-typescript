@@ -59,9 +59,10 @@ export class Helpers {
 
     if (name === "tslib") {
       if (typeof version !== "string" || lt(version, "2.4.0")) {
-        logger.error(
-          "This version of tslib is not compatible with Awesome TypeScript. Please upgrade to the latest release."
-        );
+        logger.error({
+          message:
+            "This version of tslib is not compatible with Awesome TypeScript. Please upgrade to the latest release."
+        });
         return false;
       }
       supported = true;

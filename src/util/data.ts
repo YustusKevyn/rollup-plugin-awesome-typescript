@@ -1,7 +1,7 @@
-export function concat<T>(target: T[], ...args: (Readonly<T> | Readonly<T[]> | undefined)[]): T[] {
-  for (let arg of args) {
-    if (!Array.isArray(arg)) target.push(arg as T);
-    else for (let value of arg) if (value !== undefined) target.push(value);
+export function concat<T>(target: T[], ...sources: (Readonly<T> | Readonly<T[]> | undefined)[]): T[] {
+  for (let source of sources) {
+    if (!Array.isArray(source)) target.push(source as T);
+    else for (let value of source) if (value !== undefined) target.push(value);
   }
   return target;
 }
@@ -19,30 +19,30 @@ export function endsWith(str: string, ...suffixes: string[]) {
   return false;
 }
 
-export function intersection<T>(a: Set<T>, b: Set<T>) {
-  let primary = a.size < b.size ? a : b,
-    secondary = a.size < b.size ? b : a;
+export function intersection<T>(set1: Set<T>, set2: Set<T>) {
+  let primary = set1.size < set2.size ? set1 : set2,
+    secondary = set1.size < set2.size ? set2 : set1;
 
   let final: Set<T> = new Set();
   for (let value of primary) if (secondary.has(value)) final.add(value);
   return final;
 }
 
-export function compareArrays(a: Readonly<any[]>, b: Readonly<any[]>) {
-  if (Object.is(a, b)) return true;
-  if (a.length !== b.length) return false;
-  return a.every(value => b.includes(value));
+export function compareArrays(arr1: Readonly<any[]>, arr2: Readonly<any[]>) {
+  if (Object.is(arr1, arr2)) return true;
+  if (arr1.length !== arr2.length) return false;
+  return arr1.every(value => arr2.includes(value));
 }
 
-export function compareObjects(a: Readonly<object>, b: Readonly<object>) {
-  if (Object.is(a, b)) return true;
-  if (Object.keys(a).length !== Object.keys(b).length) return false;
+export function compareObjects(obj1: Readonly<object>, obj2: Readonly<object>) {
+  if (Object.is(obj1, obj2)) return true;
+  if (Object.keys(obj1).length !== Object.keys(obj2).length) return false;
 
-  for (let key in a) {
-    if (!(key in b)) return false;
+  for (let key in obj1) {
+    if (!(key in obj2)) return false;
 
-    let vA = a[key as keyof typeof a],
-      vB = b[key as keyof typeof b],
+    let vA = obj1[key as keyof typeof obj1],
+      vB = obj2[key as keyof typeof obj2],
       tA = typeof vA,
       tB = typeof vB;
 

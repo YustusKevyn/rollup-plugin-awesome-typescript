@@ -3,9 +3,11 @@
   <sup><em>for Rollup</em></sup>
 </h1>
 
-A plugin to make TypeScript development using Rollup fun again:
+**Make TypeScript development using Rollup fun again!**
 
-- **Almighty watch mode**
+<!-- <img align="right" src="./screenshot.png" height="500"> -->
+
+- **Almighty watch mode**  
   Monitors all contributing files, including type-only imports and declaration
   files.
 - **Delightful error messages**  
@@ -44,6 +46,42 @@ npm i -D rollup-plugin-awesome-typescript typescript tslib
 ## Usage
 
 ## Options
+
+### `check`
+
+Type: `boolean`
+Default: `true`
+
+Specifies whether to enable type checking.
+
+### `declarations`
+
+Type: `string` | `boolean`
+
+Specifies if and where to output declaration files. Can be one of the following:
+
+- A directory name, relative or absolute path to enable the output at the
+  specified location (ignoring all options in the TSConfig)
+- `true` to enable the output using `"declarationDir"` of the TSConfig as the
+  location
+- `false` to explicitly disable the output of declaration files
+
+If undefined, the options in the TSConfig and are used as is.
+
+### `buildInfo`
+
+Type: `string` | `boolean`
+
+Specifies if and where to store incremental compilation information. Can be one
+of the following:
+
+- A directory name, relative or absolute path to enable the output at the
+  specified location (ignoring all options in the TSConfig)
+- `true` to enable the output using `"tsBuildInfoFile"` in the TSConfig as the
+  location
+- `false` to explicitly disable the output of declaration files
+
+If undefined, the options in the TSConfig and are used as is.
 
 ### `cwd`
 
@@ -90,35 +128,6 @@ Specifies the TypeScript helper library to use. Can be one of the following:
 
 - A relative or absolute path pointing to a package or an entry file
 - The name of a local dependency
-
-### `declarations`
-
-Type: `string` | `boolean`
-
-Specifies if and where to output declaration files. Can be one of the following:
-
-- A directory name, relative or absolute path to enable the output at the
-  specified location (ignoring all options in the TSConfig)
-- `true` to enable the output using `"declarationDir"` of the TSConfig as the
-  location
-- `false` to explicitly disable the output of declaration files
-
-If undefined, the options in the TSConfig and are used as is.
-
-### `buildInfo`
-
-Type: `string` | `boolean`
-
-Specifies if and where to store incremental compilation information. Can be one
-of the following:
-
-- A directory name, relative or absolute path to enable the output at the
-  specified location (ignoring all options in the TSConfig)
-- `true` to enable the output using `"tsBuildInfoFile"` in the TSConfig as the
-  location
-- `false` to explicitly disable the output of declaration files
-
-If undefined, the options in the TSConfig and are used as is.
 
 ## TSConfig
 

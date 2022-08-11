@@ -1,6 +1,6 @@
 const ESC = "\u001b";
 
-const colors = {
+const Colors = {
   black: 30,
   red: 31,
   green: 32,
@@ -10,9 +10,9 @@ const colors = {
   cyan: 36,
   white: 37,
   grey: 90
-} as const;
+};
 
-const modes = {
+const Modes = {
   bold: 1,
   dim: 2,
   italic: 3,
@@ -20,39 +20,39 @@ const modes = {
   inverse: 7,
   hidden: 8,
   strikethrough: 9
-} as const;
+};
 
-type Option = Mode | Color | BrightColor | BackgroundColor;
+type StringLike = { toString(): string };
 
-type Mode = keyof typeof modes;
-type Color = keyof typeof colors;
-type BrightColor = `bright${Capitalize<Color>}`;
-type BackgroundColor = `bg${Capitalize<Color>}`;
+export type Mode = keyof typeof Modes;
+export type Color = keyof typeof Colors;
+export type BrightColor = `bright${Capitalize<Color>}`;
+export type BackgroundColor = `bg${Capitalize<Color>}`;
 
-export function apply(arg: any, ...options: Option[]) {
+export function apply(str: StringLike, ...options: (Mode | Color | BrightColor | BackgroundColor)[]) {
   for (let option of options) {
-    if (option in modes) arg = applyMode(arg, option as Mode);
-    else if (option in colors) arg = applyColor(arg, option as Color);
-    else if (option.startsWith("bright")) arg = applyBrightColor(arg, option.slice(6).toLowerCase() as Color);
-    else if (option.startsWith("bg")) arg = applyBackgroundColor(arg, option.slice(2).toLowerCase() as Color);
+    if (option in Modes) str = applyMode(str, option as Mode);
+    else if (option in Colors) str = applyColor(str, option as Color);
+    else if (option.startsWith("bright")) str = applyBrightColor(str, option.slice(6).toLowerCase() as Color);
+    else if (option.startsWith("bg")) str = applyBackgroundColor(str, option.slice(2).toLowerCase() as Color);
   }
-  return arg;
+  return str as string;
 }
 
-function applyMode(arg: string, mode: Mode) {
-  let code = modes[mode],
+export function applyMode(str: StringLike, mode: Mode) {
+  let code = Modes[mode],
     revert = code === 1 ? 22 : code + 20;
-  return ESC + "[" + code + "m" + arg + ESC + "[" + revert + "m";
+  return ESC + "[" + code + "m" + str + ESC + "[" + revert + "m";
 }
 
-function applyColor(arg: string, color: Color) {
-  return ESC + "[" + colors[color] + "m" + arg + ESC + "[39m";
+export function applyColor(str: StringLike, color: Color) {
+  return ESC + "[" + Colors[color] + "m" + str + ESC + "[39m";
 }
 
-function applyBrightColor(arg: string, color: Color) {
-  return ESC + "[" + (colors[color] + 60) + "m" + arg + ESC + "[39m";
+export function applyBrightColor(str: StringLike, color: Color) {
+  return ESC + "[" + (Colors[color] + 60) + "m" + str + ESC + "[39m";
 }
 
-function applyBackgroundColor(arg: string, color: Color) {
-  return ESC + "[" + (colors[color] + 10) + "m" + arg + ESC + "[49m";
+export function applyBackgroundColor(str: StringLike, color: Color) {
+  return ESC + "[" + (Colors[color] + 10) + "m" + str + ESC + "[49m";
 }
