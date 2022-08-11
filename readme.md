@@ -3,9 +3,9 @@
   <sup><em>for Rollup</em></sup>
 </h1>
 
-**Make TypeScript development using Rollup fun again!**
+Make TypeScript development using Rollup fun again!
 
-<!-- <img align="right" src="./screenshot.png" height="500"> -->
+<img align="right" src="./screenshot.png" height="300">
 
 - **Almighty watch mode**  
   Monitors all contributing files, including type-only imports and declaration
