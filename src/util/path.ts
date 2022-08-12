@@ -15,6 +15,11 @@ export function isRelative(path: string) {
   return /^\.\.?($|[\\/])/.test(path);
 }
 
+export function isSubPath(path: string, parent: string) {
+  if (path.length <= parent.length) return false;
+  return path.startsWith(parent) && path[parent.length] === "/";
+}
+
 export function normalize(path: string, base?: string) {
   if (base && isRelative(path)) path = _path.relative(base, path);
   path = _path.normalize(path);

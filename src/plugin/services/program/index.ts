@@ -1,11 +1,11 @@
+import type { File } from "./types";
 import type { Plugin } from "../..";
-import type { Build, ExistingFile, File, FilesByType } from "./types";
-import type { CompilerHost, Diagnostic, SemanticDiagnosticsBuilderProgram } from "typescript";
+import type { CompilerHost, SemanticDiagnosticsBuilderProgram } from "typescript";
 
 import { readFileSync } from "fs";
 import { normalizeCase } from "../../../util/path";
 import { fileExists, isCaseSensitive } from "../../../util/fs";
-import { compareArrays, compareObjects, concat, endsWith } from "../../../util/data";
+import { compareArrays, compareObjects, endsWith } from "../../../util/data";
 
 export enum FileKind {
   Missing,
@@ -14,13 +14,9 @@ export enum FileKind {
 
 export class Program {
   public host!: CompilerHost;
-  public builder!: SemanticDiagnosticsBuilderProgram;
+  public instance!: SemanticDiagnosticsBuilderProgram;
 
   private files: Map<string, File> = new Map();
-  readonly filesByType: FilesByType = {
-    json: new Set(),
-    declaration: new Set()
-  };
 
   constructor(private plugin: Plugin) {}
 
@@ -30,60 +26,28 @@ export class Program {
   }
 
   public update() {
-    if (!this.isBuilderUpToDate()) this.builder = this.createBuilder();
-    while (this.builder.getSemanticDiagnosticsOfNextAffectedFile());
+    if (!this.isUpToDate()) this.instance = this.createInstance();
+    while (this.instance.getSemanticDiagnosticsOfNextAffectedFile());
   }
 
-  public check(files: Set<string>) {
-    let syntacticDiagnostics: Readonly<Diagnostic>[] = [],
-      semanticDiagnostics: Readonly<Diagnostic>[] = [];
+  private isUpToDate() {
+    let program = this.instance?.getProgramOrUndefined();
+    if (!program) return false;
 
-    for (let path of files) {
-      let source = this.getSource(path);
-      if (!source) continue;
+    // Compiler options
+    if (!compareObjects(program.getCompilerOptions(), this.plugin.config.store.options)) return false;
 
-      concat(syntacticDiagnostics, this.builder.getSyntacticDiagnostics(source));
-      concat(semanticDiagnostics, this.builder.getSemanticDiagnostics(source));
-    }
+    // Source files
+    let oldSourceFiles = program.getSourceFiles();
+    if (oldSourceFiles.some(source => source.version !== this.getSourceVersion(source.resolvedPath))) return false;
 
-    this.plugin.diagnostics.print(syntacticDiagnostics);
-    this.plugin.diagnostics.print(semanticDiagnostics);
-    this.plugin.diagnostics.print(this.builder.getGlobalDiagnostics());
-  }
+    // Root files
+    if (!compareArrays(program.getRootFileNames(), Array.from(this.plugin.filter.roots.keys()))) return false;
 
-  public getBuild(path: string) {
-    let file = this.getFile(path);
-    if (file.kind !== FileKind.Existing) return null;
-    if (file.build) return file.build;
-    return this.buildFile(path);
-  }
+    // Missing files
+    if (program.getMissingFilePaths().some(fileExists)) return false;
 
-  public updateFile(path: string) {
-    let current = this.files.get(path);
-    if (!current) return this.createFile(path);
-
-    let data = this.getData(path),
-      version = new Date().getTime(),
-      file: File;
-
-    if (data === null) file = { kind: FileKind.Missing, version };
-    else {
-      let source = this.plugin.compiler.instance.createSourceFile(path, data, this.plugin.config.target);
-      source.version = version.toString();
-      file = { kind: FileKind.Existing, version, source };
-    }
-    return this.setFile(path, file);
-  }
-
-  public removeFile(path: string) {
-    let file = this.files.get(path);
-    if (!file) return;
-    return this.setFile(path, { kind: FileKind.Missing, version: new Date().getTime() });
-  }
-
-  private setFile(path: string, file: File) {
-    this.files.set(path, file);
-    return file;
+    return true;
   }
 
   private getFile(path: string) {
@@ -100,7 +64,7 @@ export class Program {
     }
   }
 
-  private getSource(path: string) {
+  public getSource(path: string) {
     let file = this.getFile(path);
     return file.kind !== FileKind.Missing ? file.source : undefined;
   }
@@ -110,22 +74,58 @@ export class Program {
     return file?.kind !== FileKind.Existing ? undefined : file.source.version;
   }
 
+  private setFile(path: string, file: File) {
+    this.files.set(path, file);
+    this.plugin.builder.invalidateBuild(path);
+    return file;
+  }
+
   private createFile(path: string) {
     let compiler = this.plugin.compiler.instance,
       data = this.getData(path),
       version = new Date().getTime(),
       file: File;
 
-    if (endsWith(path, ".json")) this.filesByType.json.add(path);
-    else if (endsWith(path, ".d.ts", ".d.mts", ".d.cts")) this.filesByType.declaration.add(path);
+    if (endsWith(path, ".json")) this.plugin.filter.json.add(path);
+    else if (endsWith(path, ".d.ts", ".d.mts", ".d.cts")) this.plugin.filter.declarations.add(path);
 
     if (data === null) file = { kind: FileKind.Missing, version };
     else {
-      let source = compiler.createSourceFile(path, data, this.plugin.config.target);
+      let source = compiler.createSourceFile(path, data, this.plugin.config.store.target);
       source.version = version.toString();
       file = { kind: FileKind.Existing, version, source };
     }
     return this.setFile(path, file);
+  }
+
+  public updateFile(path: string) {
+    let current = this.files.get(path);
+    if (!current) return this.createFile(path);
+
+    let data = this.getData(path),
+      version = new Date().getTime(),
+      file: File;
+
+    if (data === null) file = { kind: FileKind.Missing, version };
+    else {
+      let source = this.plugin.compiler.instance.createSourceFile(path, data, this.plugin.config.store.target);
+      source.version = version.toString();
+      file = { kind: FileKind.Existing, version, source };
+    }
+    return this.setFile(path, file);
+  }
+
+  public removeFile(path: string) {
+    let file = this.files.get(path);
+    if (!file) return;
+    return this.setFile(path, { kind: FileKind.Missing, version: new Date().getTime() });
+  }
+
+  private deleteFile(path: string) {
+    this.files.delete(path);
+    this.plugin.builder.invalidateBuild(path);
+    this.plugin.filter.json.delete(path);
+    this.plugin.filter.declarations.delete(path);
   }
 
   private createHost(): CompilerHost {
@@ -152,64 +152,14 @@ export class Program {
     };
   }
 
-  private createBuilder() {
+  private createInstance() {
     return this.plugin.compiler.instance.createSemanticDiagnosticsBuilderProgram(
-      this.plugin.config.rootFileNames,
-      this.plugin.config.options,
+      Array.from(this.plugin.filter.roots.keys()),
+      this.plugin.config.store.options,
       this.host,
-      this.builder,
+      this.instance,
       undefined,
-      this.plugin.config.references
+      this.plugin.config.store.references
     );
-  }
-
-  private buildFile(path: string) {
-    let file = this.files.get(path) as ExistingFile,
-      build: Build = (file.build = { output: {}, dependencies: new Set() });
-
-    // Output
-    let { diagnostics } = this.builder.emit(file.source, (outPath, text) => {
-      if (endsWith(outPath, ".js")) build.output.code = text;
-      else if (endsWith(outPath, ".js.map")) build.output.codeMap = text;
-      else if (endsWith(outPath, ".d.ts")) build.output.declaration = text;
-      else if (endsWith(outPath, ".d.ts.map")) build.output.declarationMap = text;
-      else if (endsWith(outPath, ".json")) build.output.json = text;
-    });
-    if (diagnostics) this.plugin.diagnostics.print(diagnostics);
-
-    // Dependencies
-    let references = this.builder.getState().referencedMap!.getValues(file.source.resolvedPath);
-    if (references) {
-      let iterator = references.keys();
-      for (let next = iterator.next(); !next.done; next = iterator.next()) build.dependencies.add(next.value);
-    }
-
-    return build;
-  }
-
-  private deleteFile(path: string) {
-    this.files.delete(path);
-    this.filesByType.json.delete(path);
-    this.filesByType.declaration.delete(path);
-  }
-
-  private isBuilderUpToDate() {
-    let program = this.builder?.getProgramOrUndefined();
-    if (!program) return false;
-
-    // Compiler options
-    if (!compareObjects(program.getCompilerOptions(), this.plugin.config.options)) return false;
-
-    // Source files
-    let oldSourceFiles = program.getSourceFiles();
-    if (oldSourceFiles.some(source => source.version !== this.getSourceVersion(source.resolvedPath))) return false;
-
-    // Root files
-    if (!compareArrays(program.getRootFileNames(), this.plugin.config.rootFileNames)) return false;
-
-    // Missing files
-    if (program.getMissingFilePaths().some(fileExists)) return false;
-
-    return true;
   }
 }

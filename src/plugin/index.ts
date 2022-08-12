@@ -2,11 +2,13 @@ import type { State } from "./types";
 import type { Options } from "../types";
 import type { LoadResult, PluginContext } from "rollup";
 
+import { Builder } from "./services/builder";
+import { Checker } from "./services/checker";
 import { Config } from "./services/config";
 import { Compiler } from "./services/compiler";
 import { Diagnostics } from "./services/diagnostics";
-import { Emitter } from "./emitter";
-import { Files } from "./services/files";
+import { Emitter } from "./services/emitter";
+import { Filter } from "./services/filter";
 import { Helpers } from "./services/helpers";
 import { Logger } from "./services/logger";
 import { Program } from "./services/program";
@@ -30,11 +32,13 @@ export class Plugin {
   readonly config = new Config(this);
 
   readonly resolver = new Resolver(this);
-  readonly emitter = new Emitter(this);
-
-  readonly files = new Files(this);
+  readonly filter = new Filter(this);
   readonly watcher = new Watcher(this);
+
   readonly program = new Program(this);
+  readonly builder = new Builder(this);
+  readonly checker = new Checker(this);
+  readonly emitter = new Emitter(this);
 
   constructor(readonly options: Options) {
     if (options.cwd) this.cwd = normalize(options.cwd, this.cwd);
@@ -49,8 +53,6 @@ export class Plugin {
     if (!core) throw new Error();
     if (!this.state) {
       this.resolver.init();
-      this.emitter.init();
-      this.files.init();
       this.program.init();
       this.state = { cycle: 0 };
     }
@@ -58,7 +60,7 @@ export class Plugin {
 
   public start(context: PluginContext) {
     this.watcher.update();
-    for (let path of this.files.configs) context.addWatchFile(trueCase(path));
+    for (let path of this.filter.configs) context.addWatchFile(trueCase(path));
   }
 
   public resolve(id: string, origin?: string) {
@@ -66,50 +68,34 @@ export class Plugin {
     if (!origin) return null;
 
     let path = this.resolver.resolvePath(id, origin);
-    if (!path || !this.files.isSource(path)) return null;
+    if (!path || !this.filter.isModule(path)) return null;
     return trueCase(path);
   }
 
   public process(id: string) {
     let path = this.resolver.toPath(id);
-    if (!this.files.isSource(path)) return null;
+    if (!this.filter.isModule(path)) return null;
 
     // Output
-    let output = this.program.getBuild(path)?.output;
-    if (!output?.code) return null;
+    let output = this.builder.getJsOutput(path);
+    if (!output?.text) return null;
 
     // Result
-    let result: LoadResult = { code: output.code };
-    if (output.codeMap) result.map = JSON.parse(output.codeMap);
+    let result: LoadResult = { code: output.text };
+    if (output.map) result.map = JSON.parse(output.map);
     return result;
   }
 
   public end(context: PluginContext) {
-    for (let path of this.files.declarations) context.addWatchFile(trueCase(path));
-
-    let files: Set<string> = new Set();
-    for (let id of context.getModuleIds()) {
-      let path = this.resolver.toPath(id);
-      if (files.has(path) || !this.files.isSource(path)) continue;
-      files.add(path);
-
-      let queue: string[] = [path];
-      while (queue.length) {
-        let current = queue.pop()!,
-          dependencies = this.program.getBuild(current)?.dependencies;
-        if (!dependencies) continue;
-
-        for (let dependency of dependencies) {
-          if (files.has(dependency) || !this.files.isSource(dependency)) continue;
-          files.add(dependency);
-          queue.push(dependency);
-          context.addWatchFile(trueCase(dependency));
-        }
-      }
-    }
-
-    this.config.check();
+    let files = this.builder.build(context);
     this.emitter.emit(files);
-    if (this.options.check !== false) this.program.check(files);
+    this.config.check();
+
+    if (this.options.check !== false) {
+      let result = this.checker.check(files);
+      // x: 10 problems (10 errors, 2 warnings)
+      // !: 2 problems (2 warnings)
+      // v: 0 problems
+    }
   }
 }

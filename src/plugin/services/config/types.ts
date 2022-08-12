@@ -26,6 +26,5 @@ export interface Store {
   options: CompilerOptions;
   target: ScriptTarget;
   references: Readonly<ProjectReference[]>;
-  rootFileNames: string[];
-  configFileNames: string[];
+  declarations: string | false;
 }

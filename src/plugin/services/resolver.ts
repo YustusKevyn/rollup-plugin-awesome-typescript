@@ -1,5 +1,5 @@
 import type { Plugin } from "..";
-import type { ModuleResolutionCache, ModuleResolutionHost } from "typescript";
+import { flatMap, ModuleResolutionCache, ModuleResolutionHost } from "typescript";
 
 import { normalizeCase } from "../../util/path";
 import { isCaseSensitive } from "../../util/fs";
@@ -16,18 +16,28 @@ export class Resolver {
 
   public update() {
     this.cache.clear();
-    this.cache.update(this.plugin.config.options);
+    this.cache.update(this.plugin.config.store.options);
   }
 
   public toPath(id: string) {
     return this.plugin.compiler.instance.toPath(id, this.plugin.cwd, normalizeCase);
   }
 
+  public toPaths(ids: string[], filter?: (path: string) => boolean) {
+    let final: Set<string> = new Set();
+    for (let id of ids) {
+      let path = this.toPath(id);
+      if (filter && !filter(path)) continue;
+      final.add(path);
+    }
+    return final;
+  }
+
   public resolve(id: string, origin: string) {
     return this.plugin.compiler.instance.resolveModuleName(
       id,
       origin,
-      this.plugin.config.options,
+      this.plugin.config.store.options,
       this.host,
       this.cache
     ).resolvedModule;
@@ -55,7 +65,7 @@ export class Resolver {
     return this.plugin.compiler.instance.createModuleResolutionCache(
       this.plugin.cwd,
       normalizeCase,
-      this.plugin.config.options
+      this.plugin.config.store.options
     );
   }
 }

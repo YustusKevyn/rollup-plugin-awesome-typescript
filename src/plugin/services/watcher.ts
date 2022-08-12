@@ -20,13 +20,13 @@ export class Watcher {
 
     // Config
     let config = this.plugin.config;
-    if (some(this.plugin.files.configs, path => pending.has(path))) config.update();
-    else config.updateRootFiles();
+    if (some(this.plugin.filter.configs, path => pending.has(path))) config.update();
+    else config.updateFiles();
 
     // Program
     for (let [path, event] of pending) {
       if (event === "delete") this.plugin.program.removeFile(path);
-      else if (this.plugin.files.isSource(path)) this.plugin.program.updateFile(path);
+      else if (this.plugin.filter.isModule(path)) this.plugin.program.updateFile(path);
     }
     this.plugin.program.update();
   }

@@ -3,36 +3,17 @@ import type { Diagnostics, State, Store } from "./types";
 import type { CompilerOptions, ModuleKind, ParseConfigHost } from "typescript";
 
 import { dirname, isAbsolute, join, resolve } from "path";
-import { concat } from "../../../util/data";
-import { isPath, normalize } from "../../../util/path";
+import { isPath, isSubPath, normalize } from "../../../util/path";
 import { fileExists, isCaseSensitive } from "../../../util/fs";
+import { concat } from "../../../util/data";
 
 export class Config {
   private state!: State;
-  private store!: Store;
   private diagnostics!: Diagnostics;
 
+  public store!: Store;
+
   constructor(private plugin: Plugin) {}
-
-  public get options() {
-    return this.store.options;
-  }
-
-  public get target() {
-    return this.store.target;
-  }
-
-  public get references() {
-    return this.store.references;
-  }
-
-  public get configFileNames() {
-    return this.store.configFileNames;
-  }
-
-  public get rootFileNames() {
-    return this.store.rootFileNames;
-  }
 
   public init() {
     if (!this.state && !this.load()) return false;
@@ -55,25 +36,34 @@ export class Config {
       this.diagnostics.errors.push({ message: "Configuration file does not exist anymore.", path: this.state.path });
       return;
     }
-
     this.load();
-    this.plugin.files.update();
-    if (compiler.changesAffectModuleResolution(oldOptions, this.store.options)) this.plugin.resolver.update();
+
+    let { options } = this.store;
+    console.log(compiler.compilerOptionsAffectEmit(options, oldOptions));
+    if (compiler.changesAffectModuleResolution(oldOptions, options)) this.plugin.resolver.update();
+    if (compiler.compilerOptionsAffectEmit(options, oldOptions)) this.plugin.emitter.declarations.all = true;
     this.plugin.program.update();
   }
 
-  public updateRootFiles() {
+  public updateFiles() {
     let compiler = this.plugin.compiler.instance;
-    this.store.rootFileNames = compiler.getFileNamesFromConfigSpecs(
-      this.store.source.configFileSpecs!,
-      this.state.base,
-      this.store.options,
-      this.state.host,
-      []
+    this.plugin.filter.roots = this.plugin.resolver.toPaths(
+      compiler.getFileNamesFromConfigSpecs(
+        this.store.source.configFileSpecs!,
+        this.state.base,
+        this.store.options,
+        this.state.host,
+        []
+      ),
+      this.rootFilter
     );
-    this.plugin.files.updateScripts();
     this.plugin.program.update();
   }
+
+  private rootFilter = (path: string) => {
+    if (this.store.declarations && isSubPath(path, this.store.declarations)) return false;
+    return true;
+  };
 
   private load() {
     let input = this.plugin.options.config ?? "tsconfig.json",
@@ -129,20 +119,24 @@ export class Config {
     let source = compiler.readJsonConfigFile(this.state.path, compiler.sys.readFile),
       config = compiler.parseJsonSourceFileConfigFileContent(source, this.state.host, this.state.base);
     for (let error of config.errors) this.diagnostics.errors.push(this.plugin.diagnostics.toRecord(error));
-    this.normalize(config.options);
 
-    // Save
+    let options = this.normalizeOptions(config.options),
+      declarations = options.declaration ? (options.declarationDir || options.outDir)! : false;
+
     this.store = {
       source,
-      target: compiler.getEmitScriptTarget(config.options),
-      options: config.options,
-      references: config.projectReferences ?? [],
-      rootFileNames: config.fileNames,
-      configFileNames: concat([this.state.path], source.extendedSourceFiles)
+      options,
+      declarations,
+      target: compiler.getEmitScriptTarget(options),
+      references: config.projectReferences ?? []
     };
+
+    // Files
+    this.plugin.filter.roots = this.plugin.resolver.toPaths(config.fileNames, this.rootFilter);
+    this.plugin.filter.configs = this.plugin.resolver.toPaths(concat([this.state.path], source.extendedSourceFiles));
   }
 
-  private normalize(options: CompilerOptions) {
+  private normalizeOptions(options: CompilerOptions) {
     let { buildInfo, declarations } = this.plugin.options,
       compiler = this.plugin.compiler.instance;
 
@@ -155,6 +149,7 @@ export class Config {
     options.importHelpers = true;
     options.isolatedModules = true;
     options.inlineSourceMap = false;
+    options.suppressOutputPathCheck = true;
 
     delete options.out;
     delete options.outFile;
@@ -218,6 +213,8 @@ export class Config {
         ]
       });
     }
+
+    return options;
   }
 
   private createHost(): ParseConfigHost {

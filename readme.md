@@ -5,20 +5,29 @@
 
 Make TypeScript development using Rollup fun again!
 
-<img align="right" src="./screenshot.png" height="300">
+<img align="right" src="./screenshot.png" height="250">
 
-- **Almighty watch mode**  
+- **👁️ Almighty watch mode**  
   Monitors all contributing files, including type-only imports and declaration
   files.
-- **Delightful error messages**  
+- **🦄 Delightful error messages**  
   Detailed and beautifully formatted error messages that display the erroneous
   code and its surroundings to provide more context on what went wrong.
+
+<!-- TODO -->
+
+- **🤝**
+  Tight TSConfig integration...
+- **🏃 Blazing fast rebuilds**  
+  Same speed as TypeScript....
+
+<!-- Uses incremental builds to only ever recompile and reevaluate changed files,  -->
 
 <!-- ZERO CONFIG DROP IN -->
 <!-- THIGHT TS CONFIG INTEGRATION: JSON, PATH ALIASES, FILTERS, DECLARATIONS... -->
 
 <!-- - **Blazing fast rebuilds**
-  Uses incremental builds to only ever recompile and reevaluate changed files. -->
+
 <!-- - **Monorepo ready**
   Watches extended configuration files, supports project references and
   automatically resolves path aliases. -->
