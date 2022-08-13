@@ -3,9 +3,9 @@
   <sup><em>for Rollup</em></sup>
 </h1>
 
-Make TypeScript development using Rollup fun again!
+Makes development with TypeScript and Rollup awesome!
 
-<img align="right" src="./screenshot.png" width="400">
+<img align="right" src="./screenshot.png" width="420">
 
 - **👁️ Almighty watch mode**  
   Monitors all contributing files, including type-only imports as well as
@@ -37,6 +37,9 @@ npm i -D rollup-plugin-awesome-typescript typescript tslib
 > Note: Awesome TypeScript requires you to install both `typescript` (≥ 4.5.2)
 > and `tslib` (≥ 2.4.0) separately or provide your own compatible
 > implementations for them (using the plugin options)
+
+> **Disclaimer: This plugin is still in its early days. You might want to hold
+> off on using it.**
 
 ## Usage
 

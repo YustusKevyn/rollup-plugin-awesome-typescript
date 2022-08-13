@@ -1,6 +1,7 @@
 {
   "name": "rollup-plugin-awesome-typescript",
   "version": "0.1.0",
+  "description": "🚀 Makes development with TypeScript and Rollup awesome",
   "author": "Yanis Morgenegg",
   "license": "MIT",
   "homepage": "https://github.com/YustusKevyn/rollup-plugin-awesome-typescript",
@@ -17,7 +18,8 @@
   "module": "lib/index.mjs",
   "types": "lib/index.d.ts",
   "files": [
-    "lib/**/*"
+    "lib/**/*",
+    "screenshot.png"
   ],
   "scripts": {
     "temp": "tsc --outDir temp --module nodeNext --incremental",
@@ -34,6 +36,6 @@
     "rollup-plugin-terser": "^7.0.2",
     "semver": "^7.3.7",
     "tslib": "2.4.0",
-    "typescript": "4.5.2"
+    "typescript": "^4.7.4"
   }
 }

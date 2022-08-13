@@ -6,6 +6,7 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "moduleResolution": "node",
+    "tsBuildInfoFile": ".tsbuildinfo",
     "exactOptionalPropertyTypes": true
   },
   "exclude": ["lib"]
