@@ -1,7 +1,7 @@
 export function concat<T>(target: T[], ...sources: (Readonly<T> | Readonly<T[]> | undefined)[]): T[] {
   for (let source of sources) {
     if (source === undefined) continue;
-    else if (!Array.isArray(source)) target.push(source as T);
+    if (!Array.isArray(source)) target.push(source as T);
     else for (let value of source) if (value !== undefined) target.push(value);
   }
   return target;

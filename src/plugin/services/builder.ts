@@ -1,9 +1,9 @@
-import type { Plugin } from "../..";
+import type { Plugin } from "..";
+import type { Build } from "../types";
 import type { PluginContext } from "rollup";
-import type { Build, EmittedFiles } from "./types";
 
-import { endsWith } from "../../../util/data";
-import { trueCase } from "../../../util/path";
+import { endsWith } from "../../util/data";
+import { trueCase } from "../../util/path";
 
 export class Builder {
   private builds: Map<string, Build> = new Map();
@@ -11,6 +11,8 @@ export class Builder {
   constructor(private plugin: Plugin) {}
 
   public build(context: PluginContext) {
+    for (let path of this.plugin.filter.declarations) context.addWatchFile(trueCase(path));
+
     let files: Set<string> = new Set();
     for (let id of context.getModuleIds()) {
       let path = this.plugin.resolver.toPath(id);
@@ -41,12 +43,25 @@ export class Builder {
     return this.getBuild(path)?.dependencies ?? null;
   }
 
-  public getJsOutput(path: string) {
+  public getJs(path: string) {
     return this.getBuild(path)?.output.js || null;
   }
 
-  public getDeclarationOutput(path: string) {
-    return this.getBuild(path)?.output.js || null;
+  public getDeclaration(path: string) {
+    let output = this.getBuild(path)?.output;
+    if (!output) return null;
+
+    if (output.declaration === null) {
+      let files = this.emit(path, true);
+      if (!files) return null;
+
+      if (!files.declaration) output.declaration = false;
+      else {
+        this.plugin.emitter.declarations.pending.add(path);
+        output.declaration = { text: files.declaration, map: files.declarationMap };
+      }
+    }
+    return output.declaration;
   }
 
   private createBuild(path: string) {
@@ -60,15 +75,8 @@ export class Builder {
       };
 
     // Output
-    let files: EmittedFiles = {},
-      result = program.emit(source, (outPath, text) => {
-        if (endsWith(outPath, ".js")) files.js = text;
-        else if (endsWith(outPath, ".js.map")) files.jsMap = text;
-        else if (endsWith(outPath, ".d.ts")) files.declaration = text;
-        else if (endsWith(outPath, ".d.ts.map")) files.declarationMap = text;
-      });
-
-    if (result.diagnostics) this.plugin.diagnostics.print(result.diagnostics);
+    let files = this.emit(path);
+    if (!files) return null;
     if (files.js) build.output.js = { text: files.js, map: files.jsMap };
     if (files.declaration) {
       this.plugin.emitter.declarations.pending.add(path);
@@ -82,10 +90,36 @@ export class Builder {
       for (let next = iterator.next(); !next.done; next = iterator.next()) build.dependencies.add(next.value);
     }
 
+    // Save
+    this.builds.set(path, build);
     return build;
   }
 
   public invalidateBuild(path: string) {
     this.builds.delete(path);
+  }
+
+  public invalidateDeclarations() {
+    for (let build of this.builds.values()) build.output.declaration = null;
+  }
+
+  private emit(path: string, declarationOnly: boolean = false) {
+    let source = this.plugin.program.getSource(path);
+    if (!source) {
+      this.invalidateBuild(path);
+      return null;
+    }
+
+    let files: { js?: string; jsMap?: string; declaration?: string; declarationMap?: string; json?: string } = {},
+      writeFile = (emitPath: string, emitText: string) => {
+        if (endsWith(emitPath, ".js")) files.js = emitText;
+        else if (endsWith(emitPath, ".js.map")) files.jsMap = emitText;
+        else if (endsWith(emitPath, ".d.ts")) files.declaration = emitText;
+        else if (endsWith(emitPath, ".d.ts.map")) files.declarationMap = emitText;
+      };
+
+    let result = this.plugin.program.instance.emit(source, writeFile, undefined, declarationOnly);
+    if (result.diagnostics) this.plugin.diagnostics.record(result.diagnostics);
+    return files;
   }
 }

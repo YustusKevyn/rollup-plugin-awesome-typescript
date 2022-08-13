@@ -1,13 +1,19 @@
-import type { Plugin } from "../..";
-import type { State } from "./types";
+import type { Plugin } from "..";
+import type typescript from "typescript";
 
 import { lt } from "semver";
 import { join, resolve } from "path";
-import { apply } from "../../../util/ansi";
-import { isDistinct, isRelative, normalize } from "../../../util/path";
+import { apply } from "../../util/ansi";
+import { isDistinct, isRelative, normalise } from "../../util/path";
 
 export class Compiler {
-  private state!: State;
+  private state!: {
+    path: string;
+    name?: string;
+    version?: string;
+    instance: typeof typescript;
+    supported: boolean;
+  };
 
   constructor(private plugin: Plugin) {}
 
@@ -33,16 +39,16 @@ export class Compiler {
 
   private load() {
     let input = this.plugin.options.compiler ?? "typescript",
-      logger = this.plugin.logger;
+      tracker = this.plugin.tracker;
     if (isRelative(input)) input = resolve(this.plugin.cwd, input);
 
     // Path
     let path: string;
     try {
-      path = normalize(require.resolve(input));
+      path = normalise(require.resolve(input));
     } catch {
-      if (isDistinct(input)) logger.error({ message: "Could not find the specified compiler.", path: input });
-      else logger.error({ message: `Could not find the specified compiler "${input}".` });
+      if (isDistinct(input)) tracker.recordError({ message: "Could not find the specified compiler.", path: input });
+      else tracker.recordError({ message: `Could not find the specified compiler "${input}".` });
       return false;
     }
 
@@ -59,7 +65,7 @@ export class Compiler {
 
     if (name === "typescript") {
       if (typeof version !== "string" || lt(version, "4.5.0")) {
-        logger.error({
+        tracker.recordError({
           message:
             "This version of TypeScript is not compatible with Awesome TypeScript. Please upgrade to the latest release."
         });
@@ -73,8 +79,9 @@ export class Compiler {
     try {
       instance = require(path);
     } catch {
-      if (!name && isDistinct(input)) logger.error({ message: "Could not load the specified compiler.", path: input });
-      else logger.error({ message: `Could not load the specified compiler "${name ?? input}".` });
+      if (!name && isDistinct(input))
+        tracker.recordError({ message: "Could not load the specified compiler.", path: input });
+      else tracker.recordError({ message: `Could not load the specified compiler "${name ?? input}".` });
       return false;
     }
 

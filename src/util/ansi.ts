@@ -1,3 +1,5 @@
+import type { StringLike } from "./types";
+
 const ESC = "\u001b";
 
 const Colors = {
@@ -22,19 +24,21 @@ const Modes = {
   strikethrough: 9
 };
 
-type StringLike = { toString(): string };
+export type Style = Mode | Color | BrightColor | BackgroundColor;
+export type Styles = (Style | undefined)[];
 
 export type Mode = keyof typeof Modes;
 export type Color = keyof typeof Colors;
 export type BrightColor = `bright${Capitalize<Color>}`;
 export type BackgroundColor = `bg${Capitalize<Color>}`;
 
-export function apply(str: StringLike, ...options: (Mode | Color | BrightColor | BackgroundColor)[]) {
-  for (let option of options) {
-    if (option in Modes) str = applyMode(str, option as Mode);
-    else if (option in Colors) str = applyColor(str, option as Color);
-    else if (option.startsWith("bright")) str = applyBrightColor(str, option.slice(6).toLowerCase() as Color);
-    else if (option.startsWith("bg")) str = applyBackgroundColor(str, option.slice(2).toLowerCase() as Color);
+export function apply(str: StringLike, ...styles: Styles) {
+  for (let style of styles) {
+    if (!style) continue;
+    if (style in Modes) str = applyMode(str, style as Mode);
+    else if (style in Colors) str = applyColor(str, style as Color);
+    else if (style.startsWith("bright")) str = applyBrightColor(str, style.slice(6).toLowerCase() as Color);
+    else if (style.startsWith("bg")) str = applyBackgroundColor(str, style.slice(2).toLowerCase() as Color);
   }
   return str as string;
 }

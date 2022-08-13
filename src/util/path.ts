@@ -20,20 +20,20 @@ export function isSubPath(path: string, parent: string) {
   return path.startsWith(parent) && path[parent.length] === "/";
 }
 
-export function normalize(path: string, base?: string) {
+export function normalise(path: string, base?: string) {
   if (base && isRelative(path)) path = _path.relative(base, path);
   path = _path.normalize(path);
-  path = normalizeSlashes(path);
-  path = normalizeCase(path);
+  path = normaliseSlashes(path);
+  path = normaliseCase(path);
   return path;
 }
 
-export function normalizeSlashes(path: string) {
+export function normaliseSlashes(path: string) {
   if (!path.includes("\\")) return path;
   return path.replaceAll("\\", "/");
 }
 
-export function normalizeCase(path: string) {
+export function normaliseCase(path: string) {
   return isCaseSensitive ? path : path.toLowerCase();
 }
 

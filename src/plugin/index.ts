@@ -1,4 +1,3 @@
-import type { State } from "./types";
 import type { Options } from "../types";
 import type { LoadResult, PluginContext } from "rollup";
 
@@ -13,18 +12,24 @@ import { Helpers } from "./services/helpers";
 import { Logger } from "./services/logger";
 import { Program } from "./services/program";
 import { Resolver } from "./services/resolver";
+import { Tracker } from "./services/tracker";
 import { Watcher } from "./services/watcher";
 
 import { apply } from "../util/ansi";
-import { normalize, trueCase } from "../util/path";
+import { EmptyLine } from "./constants";
+import { normalise, trueCase } from "../util/path";
 
 export class Plugin {
-  private state!: State;
+  private state = {
+    cycle: 0,
+    initialised: false
+  };
 
-  readonly cwd: string = normalize(process.cwd());
+  readonly cwd: string = normalise(process.cwd());
   readonly context?: string;
 
   readonly logger = new Logger(this);
+  readonly tracker = new Tracker(this);
   readonly diagnostics = new Diagnostics(this);
 
   readonly compiler = new Compiler(this);
@@ -41,24 +46,29 @@ export class Plugin {
   readonly emitter = new Emitter(this);
 
   constructor(readonly options: Options) {
-    if (options.cwd) this.cwd = normalize(options.cwd, this.cwd);
-    if (options.context) this.context = normalize(options.context, this.cwd);
+    if (options.cwd) this.cwd = normalise(options.cwd, this.cwd);
+    if (options.context) this.context = normalise(options.context, this.cwd);
   }
 
   public init() {
-    this.logger.log([this.logger.PADDING, apply("Awesome TypeScript", "underline")]);
-    let core = this.compiler.init() && this.helpers.init() && this.config.init();
-    this.logger.log(this.logger.PADDING);
+    this.tracker.reset();
+    this.logger.log([EmptyLine, apply("Awesome TypeScript", "underline")]);
 
-    if (!core) throw new Error();
-    if (!this.state) {
+    let core = this.compiler.init() && this.helpers.init() && this.config.init();
+    if (!core) {
+      this.tracker.print();
+      throw new Error();
+    }
+
+    if (!this.state.initialised) {
       this.resolver.init();
       this.program.init();
-      this.state = { cycle: 0 };
+      this.state.initialised = true;
     }
   }
 
   public start(context: PluginContext) {
+    this.state.cycle++;
     this.watcher.update();
     for (let path of this.filter.configs) context.addWatchFile(trueCase(path));
   }
@@ -77,7 +87,7 @@ export class Plugin {
     if (!this.filter.isModule(path)) return null;
 
     // Output
-    let output = this.builder.getJsOutput(path);
+    let output = this.builder.getJs(path);
     if (!output?.text) return null;
 
     // Result
@@ -88,14 +98,8 @@ export class Plugin {
 
   public end(context: PluginContext) {
     let files = this.builder.build(context);
+    if (this.options.check !== false) this.checker.check(files);
     this.emitter.emit(files);
-    this.config.check();
-
-    if (this.options.check !== false) {
-      let result = this.checker.check(files);
-      // x: 10 problems (10 errors, 2 warnings)
-      // !: 2 problems (2 warnings)
-      // v: 0 problems
-    }
+    this.tracker.print(true);
   }
 }

@@ -1,69 +1,62 @@
 import type { Plugin } from "..";
-import type { LoggerRecord } from "./logger";
-import type { Diagnostic, DiagnosticMessageChain, SourceFile } from "typescript";
+import type { Record, RecordChild } from "../types";
+import type { Diagnostic, DiagnosticCategory, DiagnosticMessageChain, SourceFile } from "typescript";
 
 import { apply } from "../../util/ansi";
-import { concat } from "../../util/data";
+import { RecordCategory } from "../constants";
 
 export class Diagnostics {
   constructor(private plugin: Plugin) {}
 
-  public print(diagnostics: Readonly<Diagnostic> | Readonly<Diagnostic[]>) {
-    let compiler = this.plugin.compiler.instance;
+  record(diagnostics: Readonly<Diagnostic> | Readonly<Diagnostic[]>) {
     for (let diagnostic of Array.isArray(diagnostics) ? diagnostics : [diagnostics]) {
-      let record = this.toRecord(diagnostic);
-      if (diagnostic.category === compiler.DiagnosticCategory.Error) this.plugin.logger.error(record);
-      else if (diagnostic.category === compiler.DiagnosticCategory.Warning) this.plugin.logger.warn(record);
-      else this.plugin.logger.info(record);
+      this.plugin.tracker.record(this.toRecord(diagnostic));
     }
   }
 
-  public toRecord(diagnostic: Readonly<Diagnostic>) {
+  private toRecord(diagnostic: Diagnostic) {
     let compiler = this.plugin.compiler.instance,
-      logger = this.plugin.logger,
-      description: string[] = [],
-      record: LoggerRecord = {
+      record: Record = {
         code: "TS" + diagnostic.code,
-        message: this.toMessage(diagnostic.messageText)
+        category: this.toCategory(diagnostic.category),
+        message: this.toMessage(diagnostic.messageText),
+        children: []
       };
 
-    // File
     if (diagnostic.file) {
       record.path = diagnostic.file.fileName;
       record.position = compiler.getLineAndCharacterOfPosition(diagnostic.file, diagnostic.start!);
-      concat(description, logger.PADDING, this.toSnippet(diagnostic.file, diagnostic.start!, diagnostic.length!));
+      record.snippet = this.toSnippet(diagnostic.file, diagnostic.start!, diagnostic.length!);
     }
 
     // Information
     if (diagnostic.relatedInformation?.length) {
-      let indentation = "   ";
       for (let info of diagnostic.relatedInformation) {
-        concat(
-          description,
-          logger.PADDING,
-          this.toMessage(info.messageText).map((line, i) => (i === 0 ? "─→ " : indentation) + apply(line, "bold"))
-        );
+        let child: RecordChild = { message: this.toMessage(info.messageText) };
         if (info.file) {
-          let position = compiler.getLineAndCharacterOfPosition(info.file, info.start!);
-          concat(
-            description,
-            indentation + logger.formatLocation(info.file.fileName, position),
-            logger.PADDING,
-            this.toSnippet(info.file, info.start!, info.length!, 1, 1, 5).map(line => indentation + line)
-          );
+          child.path = info.file.fileName;
+          child.position = compiler.getLineAndCharacterOfPosition(info.file, info.start!);
+          child.snippet = this.toSnippet(info.file, info.start!, info.length!, 1, 1, 5);
         }
+        record.children!.push(child);
       }
     }
-
-    record.description = description;
     return record;
+  }
+
+  private toCategory(category: DiagnosticCategory): RecordCategory {
+    let { DiagnosticCategory } = this.plugin.compiler.instance;
+    if (category === DiagnosticCategory.Error) return RecordCategory.Error;
+    if (category === DiagnosticCategory.Warning) return RecordCategory.Warning;
+    if (category === DiagnosticCategory.Suggestion) return RecordCategory.Hint;
+    return RecordCategory.Info;
   }
 
   private toMessage(message: DiagnosticMessageChain | string) {
     if (typeof message === "string") return [message];
     let final: string[] = [],
       traverse = (chain: DiagnosticMessageChain, level = 0) => {
-        final.push("  ".repeat(level) + chain.messageText);
+        final.push(chain.messageText);
         if (chain.next) for (let child of chain.next) traverse(child, level + 1);
       };
     traverse(message);

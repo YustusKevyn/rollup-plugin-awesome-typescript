@@ -1,13 +1,17 @@
-import type { Plugin } from "../..";
-import type { State } from "./types";
+import type { Plugin } from "..";
 
 import { lt } from "semver";
 import { join, resolve } from "path";
-import { apply } from "../../../util/ansi";
-import { isDistinct, isRelative, normalize } from "../../../util/path";
+import { apply } from "../../util/ansi";
+import { isDistinct, isRelative, normalise } from "../../util/path";
 
 export class Helpers {
-  private state!: State;
+  private state!: {
+    path: string;
+    name?: string;
+    version?: string;
+    supported: boolean;
+  };
 
   constructor(private plugin: Plugin) {}
 
@@ -33,16 +37,17 @@ export class Helpers {
 
   private load() {
     let input = this.plugin.options.helpers ?? "tslib",
-      logger = this.plugin.logger;
+      tracker = this.plugin.tracker;
     if (isRelative(input)) input = resolve(this.plugin.cwd, input);
 
     // Path
     let path: string;
     try {
-      path = normalize(require.resolve(input));
+      path = normalise(require.resolve(input));
     } catch {
-      if (isDistinct(input)) logger.error({ message: "Could not find the specified helper library.", path: input });
-      else logger.error({ message: `Could not find the specified helper library "${input}".` });
+      if (isDistinct(input))
+        tracker.recordError({ message: "Could not find the specified helper library.", path: input });
+      else tracker.recordError({ message: `Could not find the specified helper library "${input}".` });
       return false;
     }
 
@@ -59,7 +64,7 @@ export class Helpers {
 
     if (name === "tslib") {
       if (typeof version !== "string" || lt(version, "2.4.0")) {
-        logger.error({
+        tracker.recordError({
           message:
             "This version of tslib is not compatible with Awesome TypeScript. Please upgrade to the latest release."
         });

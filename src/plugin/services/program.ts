@@ -1,16 +1,12 @@
-import type { File } from "./types";
-import type { Plugin } from "../..";
+import type { Plugin } from "..";
+import type { File } from "../types";
 import type { CompilerHost, SemanticDiagnosticsBuilderProgram } from "typescript";
 
+import { FileKind } from "../constants";
 import { readFileSync } from "fs";
-import { normalizeCase } from "../../../util/path";
-import { fileExists, isCaseSensitive } from "../../../util/fs";
-import { compareArrays, compareObjects, endsWith } from "../../../util/data";
-
-export enum FileKind {
-  Missing,
-  Existing
-}
+import { normaliseCase } from "../../util/path";
+import { fileExists, isCaseSensitive } from "../../util/fs";
+import { compareArrays, compareObjects, endsWith } from "../../util/data";
 
 export class Program {
   public host!: CompilerHost;
@@ -59,7 +55,7 @@ export class Program {
     try {
       return readFileSync(path, "utf-8");
     } catch {
-      this.plugin.logger.error({ message: "Failed to read file.", path });
+      this.plugin.tracker.recordError({ message: "Failed to read file.", path });
       return null;
     }
   }
@@ -132,7 +128,7 @@ export class Program {
     let compiler = this.plugin.compiler.instance;
     return {
       fileExists: compiler.sys.fileExists,
-      getCanonicalFileName: normalizeCase,
+      getCanonicalFileName: normaliseCase,
       getCurrentDirectory: () => this.plugin.cwd,
       getDefaultLibFileName: compiler.getDefaultLibFilePath,
       getNewLine: () => compiler.sys.newLine,

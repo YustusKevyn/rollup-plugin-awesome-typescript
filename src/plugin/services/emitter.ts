@@ -1,14 +1,16 @@
-import type { Plugin } from "../..";
-import type { EmitDeclarations } from "./types";
+import type { Plugin } from "..";
 
 import { mkdirSync, writeFileSync } from "fs";
 import { dirname, join, relative } from "path";
-import { intersection } from "../../../util/data";
-import { isSubPath, normalizeCase } from "../../../util/path";
-import { directoryExists } from "../../../util/fs";
+import { intersection } from "../../util/data";
+import { isSubPath, normaliseCase } from "../../util/path";
+import { directoryExists } from "../../util/fs";
 
 export class Emitter {
-  readonly declarations: EmitDeclarations = { all: true, pending: new Set() };
+  readonly declarations = {
+    all: true,
+    pending: new Set() as Set<string>
+  };
 
   constructor(private plugin: Plugin) {}
 
@@ -21,7 +23,7 @@ export class Emitter {
   private emitBuildInfo() {
     let writeFile = (path: string, text: string) => writeFileSync(path, text, "utf-8"),
       { diagnostics } = this.plugin.program.instance.emitBuildInfo(writeFile);
-    if (diagnostics) this.plugin.diagnostics.print(diagnostics);
+    if (diagnostics) this.plugin.diagnostics.record(diagnostics);
   }
 
   private emitDeclarations(files: Set<string>) {
@@ -31,11 +33,11 @@ export class Emitter {
     let compiler = this.plugin.compiler.instance,
       rootDir = options.rootDir;
     if (!rootDir)
-      rootDir = compiler.computeCommonSourceDirectoryOfFilenames(Array.from(files), this.plugin.cwd, normalizeCase);
+      rootDir = compiler.computeCommonSourceDirectoryOfFilenames(Array.from(files), this.plugin.cwd, normaliseCase);
     if (!this.declarations.all) files = intersection(files, this.declarations.pending);
 
     for (let path of files) {
-      let output = this.plugin.builder.getDeclarationOutput(path);
+      let output = this.plugin.builder.getDeclaration(path);
       if (!output) continue;
 
       let outPath = join(declarations, relative(rootDir, compiler.removeFileExtension(path)));

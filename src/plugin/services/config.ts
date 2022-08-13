@@ -1,17 +1,33 @@
-import type { Plugin } from "../..";
-import type { Diagnostics, State, Store } from "./types";
-import type { CompilerOptions, ModuleKind, ParseConfigHost } from "typescript";
+import type { Plugin } from "..";
+import type {
+  CompilerOptions,
+  ModuleKind,
+  ParseConfigHost,
+  ProjectReference,
+  ScriptTarget,
+  TsConfigSourceFile
+} from "typescript";
 
 import { dirname, isAbsolute, join, resolve } from "path";
-import { isPath, isSubPath, normalize } from "../../../util/path";
-import { fileExists, isCaseSensitive } from "../../../util/fs";
-import { concat } from "../../../util/data";
+import { isPath, isSubPath, normalise } from "../../util/path";
+import { fileExists, isCaseSensitive } from "../../util/fs";
+import { concat } from "../../util/data";
 
 export class Config {
-  private state!: State;
-  private diagnostics!: Diagnostics;
+  private state!: {
+    path: string;
+    base: string;
+    host: ParseConfigHost;
+    supportedModuleKinds: ModuleKind[];
+  };
 
-  public store!: Store;
+  public store!: {
+    source: TsConfigSourceFile;
+    options: CompilerOptions;
+    target: ScriptTarget;
+    references: Readonly<ProjectReference[]>;
+    declarations: string | false;
+  };
 
   constructor(private plugin: Plugin) {}
 
@@ -22,26 +38,22 @@ export class Config {
     return true;
   }
 
-  public check() {
-    for (let info of this.diagnostics.infos) this.plugin.logger.info(info);
-    for (let warning of this.diagnostics.warnings) this.plugin.logger.warn(warning);
-    for (let error of this.diagnostics.errors) this.plugin.logger.error(error);
-  }
-
   public update() {
     let compiler = this.plugin.compiler.instance,
       oldOptions = this.store.options;
 
     if (!fileExists(this.state.path)) {
-      this.diagnostics.errors.push({ message: "Configuration file does not exist anymore.", path: this.state.path });
+      this.plugin.tracker.recordError({ message: "Configuration file does not exist anymore.", path: this.state.path });
       return;
     }
     this.load();
 
     let { options } = this.store;
-    console.log(compiler.compilerOptionsAffectEmit(options, oldOptions));
     if (compiler.changesAffectModuleResolution(oldOptions, options)) this.plugin.resolver.update();
-    if (compiler.compilerOptionsAffectEmit(options, oldOptions)) this.plugin.emitter.declarations.all = true;
+    if (compiler.compilerOptionsAffectEmit(options, oldOptions)) {
+      this.plugin.builder.invalidateDeclarations();
+      this.plugin.emitter.declarations.all = true;
+    }
     this.plugin.program.update();
   }
 
@@ -67,14 +79,14 @@ export class Config {
 
   private load() {
     let input = this.plugin.options.config ?? "tsconfig.json",
-      logger = this.plugin.logger,
+      tracker = this.plugin.tracker,
       path;
 
     // Path
     if (isPath(input)) {
       path = !isAbsolute(input) ? resolve(this.plugin.cwd, input) : input;
       if (!fileExists(path)) {
-        logger.error({ message: "TSConfig file does not exist.", path: path });
+        tracker.recordError({ message: "TSConfig file does not exist.", path: path });
         return false;
       }
     }
@@ -96,14 +108,14 @@ export class Config {
       }
 
       if (!path) {
-        logger.error({ message: `TSConfig file with name "${input}" does not exist in directory tree.` });
+        tracker.recordError({ message: `TSConfig file with name "${input}" does not exist in directory tree.` });
         return false;
       }
     }
 
     // Save
     this.state = {
-      path: normalize(path),
+      path: normalise(path),
       base: this.plugin.context ?? dirname(path),
       host: this.createHost(),
       supportedModuleKinds: this.getSupportedModuleKinds()
@@ -113,14 +125,12 @@ export class Config {
   }
 
   private parse() {
-    let compiler = this.plugin.compiler.instance;
-    this.diagnostics = { errors: [], warnings: [], infos: [] };
-
-    let source = compiler.readJsonConfigFile(this.state.path, compiler.sys.readFile),
+    let compiler = this.plugin.compiler.instance,
+      source = compiler.readJsonConfigFile(this.state.path, compiler.sys.readFile),
       config = compiler.parseJsonSourceFileConfigFileContent(source, this.state.host, this.state.base);
-    for (let error of config.errors) this.diagnostics.errors.push(this.plugin.diagnostics.toRecord(error));
+    this.plugin.diagnostics.record(config.errors);
 
-    let options = this.normalizeOptions(config.options),
+    let options = this.normaliseOptions(config.options),
       declarations = options.declaration ? (options.declarationDir || options.outDir)! : false;
 
     this.store = {
@@ -136,9 +146,10 @@ export class Config {
     this.plugin.filter.configs = this.plugin.resolver.toPaths(concat([this.state.path], source.extendedSourceFiles));
   }
 
-  private normalizeOptions(options: CompilerOptions) {
+  private normaliseOptions(options: CompilerOptions) {
     let { buildInfo, declarations } = this.plugin.options,
-      compiler = this.plugin.compiler.instance;
+      compiler = this.plugin.compiler.instance,
+      tracker = this.plugin.tracker;
 
     // Force
     options.noEmit = false;
@@ -158,7 +169,7 @@ export class Config {
     if (options.module === undefined) options.module = compiler.ModuleKind.ESNext;
     else if (!this.state.supportedModuleKinds.includes(options.module)) {
       let names = this.state.supportedModuleKinds.map(kind => compiler.ModuleKind[kind]).join(", ");
-      this.diagnostics.errors.push({
+      tracker.recordError({
         message: `Unsupported module kind: ${compiler.ModuleKind[options.module]}.`,
         description: [
           "Rollup requires TypeScript to produce files using the ES Modules syntax.",
@@ -175,7 +186,7 @@ export class Config {
         else options.declarationDir = resolve(this.plugin.cwd, declarations);
       } else if (declarations === true && options.declarationDir === undefined && options.outDir === undefined) {
         options.declaration = false;
-        this.diagnostics.warnings.push({
+        tracker.recordWarning({
           message:
             'The output of declaration files is disabled. Although "declarations" is set to `true` in the plugin options, no output directory was specified.',
           description:
@@ -184,7 +195,7 @@ export class Config {
       } else options.declaration = declarations;
     } else if (options.declaration === true && options.declarationDir === undefined && options.outDir === undefined) {
       options.declaration = false;
-      this.diagnostics.warnings.push({
+      tracker.recordWarning({
         message:
           'The output of declaration files is disabled. Although "declaration" is set to `true` in the TSConfig, no output directory was specified.',
         description: [
@@ -204,7 +215,7 @@ export class Config {
         else options.tsBuildInfoFile = resolve(this.plugin.cwd, buildInfo);
       }
     } else if (options.tsBuildInfoFile === undefined) {
-      this.diagnostics.infos.push({
+      tracker.recordHint({
         message:
           "It is recommended to specify a file for storing incremental compilation information to reduce rebuild time.",
         description: [
