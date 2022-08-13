@@ -1,7 +1,7 @@
 {
   "name": "rollup-plugin-awesome-typescript",
-  "version": "0.1.0",
-  "description": "🚀 Makes development with TypeScript and Rollup awesome",
+  "version": "0.1.1",
+  "description": "🚀 Makes development with Rollup and TypeScript awesome",
   "author": "Yanis Morgenegg",
   "license": "MIT",
   "homepage": "https://github.com/YustusKevyn/rollup-plugin-awesome-typescript",
