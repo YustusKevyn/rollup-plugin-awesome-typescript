@@ -57,7 +57,10 @@ export class Plugin {
     let core = this.compiler.init() && this.helpers.init() && this.config.init();
     if (!core) {
       this.tracker.print();
-      throw new Error();
+      throw {
+        message: "Compilation failed. Check the error messages above.",
+        plugin: "Awesome Typescript"
+      };
     }
 
     if (!this.state.initialised) {
