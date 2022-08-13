@@ -56,30 +56,30 @@ export interface Options {
   check?: boolean | undefined;
 
   /**
-   * Specifies if and where to store incremental compilation information. Can
-   * be one of the following:
+   * Overwrites the TSConfig options that determine if and where to output
+   * declaration files. Can be one of the following:
    *
    * - A directory name, relative or absolute path to enable the output at the
-   *   specified location (ignoring all options in the TSConfig)
+   *   specified location
    * - `true` to enable the output using `"tsBuildInfoFile"` in the TSConfig
    *   as the location
    * - `false` to explicitly disable the output of declaration files
    *
-   * If undefined, the options in the TSConfig and are used as is.
+   * If undefined, the corresponding options in the TSConfig are used as is.
    */
   buildInfo?: string | boolean | undefined;
 
   /**
-   * Specifies if and where to output declaration files. Can be one of the
-   * following:
+   * Overwrites the TSConfig options that determine if and where to store
+   * incremental compilation information. Can be one of the following:
    *
    * - A directory name, relative or absolute path to enable the output at the
-   *   specified location (ignoring all options in the TSConfig)
+   *   specified location
    * - `true` to enable the output using `"declarationDir"` of the TSConfig
    *   as the location
    * - `false` to explicitly disable the output of declaration files
    *
-   * If undefined, the options in the TSConfig and are used as is.
+   * If undefined, the corresponding options in the TSConfig are used as is.
    */
   declarations?: string | boolean | undefined;
 }

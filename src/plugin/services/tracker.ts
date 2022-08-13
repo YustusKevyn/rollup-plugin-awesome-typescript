@@ -5,9 +5,10 @@ import { apply } from "../../util/ansi";
 import { EmptyLine, RecordCategory } from "../constants";
 
 export class Tracker {
-  private errors = 0;
-  private warnings = 0;
   private records: Record[] = [];
+
+  public errors = 0;
+  public warnings = 0;
 
   constructor(private plugin: Plugin) {}
 

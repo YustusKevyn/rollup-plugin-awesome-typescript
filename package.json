@@ -28,12 +28,12 @@
   },
   "devDependencies": {
     "@types/semver": "^7.3.10",
-    "@types/ts-expose-internals": "npm:ts-expose-internals@4.7.4",
+    "@types/ts-expose-internals": "npm:ts-expose-internals@4.5.2",
     "prettier": "^2.7.1",
     "rollup": "^2.77.0",
     "rollup-plugin-terser": "^7.0.2",
     "semver": "^7.3.7",
     "tslib": "2.4.0",
-    "typescript": "4.7.4"
+    "typescript": "4.5.2"
   }
 }

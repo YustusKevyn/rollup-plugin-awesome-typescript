@@ -153,12 +153,10 @@ export class Config {
 
     // Force
     options.noEmit = false;
-    options.noEmitOnError = false;
     options.noEmitHelpers = false;
     options.noResolve = false;
     options.incremental = true;
     options.importHelpers = true;
-    options.isolatedModules = true;
     options.inlineSourceMap = false;
     options.suppressOutputPathCheck = true;
 

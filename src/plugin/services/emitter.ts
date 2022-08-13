@@ -21,9 +21,8 @@ export class Emitter {
   }
 
   private emitBuildInfo() {
-    let writeFile = (path: string, text: string) => writeFileSync(path, text, "utf-8"),
-      { diagnostics } = this.plugin.program.instance.emitBuildInfo(writeFile);
-    if (diagnostics) this.plugin.diagnostics.record(diagnostics);
+    let writeFile = (path: string, text: string) => writeFileSync(path, text, "utf-8");
+    this.plugin.program.instance.emitBuildInfo(writeFile);
   }
 
   private emitDeclarations(files: Set<string>) {

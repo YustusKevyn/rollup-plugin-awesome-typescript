@@ -58,8 +58,9 @@ export class Plugin {
     if (!core) {
       this.tracker.print();
       throw {
+        plugin: "Awesome TypeScript",
         message: "Compilation failed. Check the error messages above.",
-        plugin: "Awesome Typescript"
+        stack: undefined
       };
     }
 
@@ -102,6 +103,19 @@ export class Plugin {
   public end(context: PluginContext) {
     let files = this.builder.build(context);
     if (this.options.check !== false) this.checker.check(files);
+
+    // No emit on error
+    if (this.config.store.options.noEmitOnError && this.tracker.errors) {
+      this.tracker.print(true);
+      throw {
+        plugin: "Awesome TypeScript",
+        message: "Compilation failed. Check the error messages above.",
+        watchFiles: context.getWatchFiles(),
+        stack: undefined
+      };
+    }
+
+    // Emit
     this.emitter.emit(files);
     this.tracker.print(true);
   }

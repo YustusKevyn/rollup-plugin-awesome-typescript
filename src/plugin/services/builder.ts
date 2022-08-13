@@ -118,8 +118,7 @@ export class Builder {
         else if (endsWith(emitPath, ".d.ts.map")) files.declarationMap = emitText;
       };
 
-    let result = this.plugin.program.instance.emit(source, writeFile, undefined, declarationOnly);
-    if (result.diagnostics) this.plugin.diagnostics.record(result.diagnostics);
+    this.plugin.program.instance.emit(source, writeFile, undefined, declarationOnly);
     return files;
   }
 }
