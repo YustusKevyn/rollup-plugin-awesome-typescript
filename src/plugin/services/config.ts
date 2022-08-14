@@ -1,4 +1,5 @@
 import type { Plugin } from "..";
+import type { Record } from "../types";
 import type {
   CompilerOptions,
   ModuleKind,
@@ -9,11 +10,14 @@ import type {
 } from "typescript";
 
 import { dirname, isAbsolute, join, resolve } from "path";
-import { isPath, isSubPath, normalise } from "../../util/path";
-import { fileExists, isCaseSensitive } from "../../util/fs";
+import { RecordCategory } from "../constants";
 import { concat } from "../../util/data";
+import { fileExists, isCaseSensitive } from "../../util/fs";
+import { isPath, isSubPath, normalise } from "../../util/path";
 
 export class Config {
+  private records: Record[] = [];
+
   private state!: {
     path: string;
     base: string;
@@ -38,12 +42,20 @@ export class Config {
     return true;
   }
 
+  public check() {
+    for (let record of this.records) this.plugin.tracker.record(record);
+  }
+
   public update() {
     let compiler = this.plugin.compiler.instance,
       oldOptions = this.store.options;
 
     if (!fileExists(this.state.path)) {
-      this.plugin.tracker.recordError({ message: "Configuration file does not exist anymore.", path: this.state.path });
+      this.records.push({
+        category: RecordCategory.Error,
+        message: "TSConfig file does not exist anymore.",
+        path: this.state.path
+      });
       return;
     }
     this.load();
@@ -125,10 +137,12 @@ export class Config {
   }
 
   private parse() {
-    let compiler = this.plugin.compiler.instance,
-      source = compiler.readJsonConfigFile(this.state.path, compiler.sys.readFile),
+    let compiler = this.plugin.compiler.instance;
+    this.records = [];
+
+    let source = compiler.readJsonConfigFile(this.state.path, compiler.sys.readFile),
       config = compiler.parseJsonSourceFileConfigFileContent(source, this.state.host, this.state.base);
-    this.plugin.diagnostics.record(config.errors);
+    for (let error of config.errors) this.records.push(this.plugin.diagnostics.toRecord(error));
 
     let options = this.normaliseOptions(config.options),
       declarations = options.declaration ? (options.declarationDir || options.outDir)! : false;
@@ -148,8 +162,7 @@ export class Config {
 
   private normaliseOptions(options: CompilerOptions) {
     let { buildInfo, declarations } = this.plugin.options,
-      compiler = this.plugin.compiler.instance,
-      tracker = this.plugin.tracker;
+      compiler = this.plugin.compiler.instance;
 
     // Force
     options.noEmit = false;
@@ -167,7 +180,8 @@ export class Config {
     if (options.module === undefined) options.module = compiler.ModuleKind.ESNext;
     else if (!this.state.supportedModuleKinds.includes(options.module)) {
       let names = this.state.supportedModuleKinds.map(kind => compiler.ModuleKind[kind]).join(", ");
-      tracker.recordError({
+      this.records.push({
+        category: RecordCategory.Error,
         message: `Unsupported module kind: ${compiler.ModuleKind[options.module]}.`,
         description: [
           "Rollup requires TypeScript to produce files using the ES Modules syntax.",
@@ -184,7 +198,8 @@ export class Config {
         else options.declarationDir = resolve(this.plugin.cwd, declarations);
       } else if (declarations === true && options.declarationDir === undefined && options.outDir === undefined) {
         options.declaration = false;
-        tracker.recordWarning({
+        this.records.push({
+          category: RecordCategory.Warning,
           message:
             'The output of declaration files is disabled. Although "declarations" is set to `true` in the plugin options, no output directory was specified.',
           description:
@@ -193,7 +208,8 @@ export class Config {
       } else options.declaration = declarations;
     } else if (options.declaration === true && options.declarationDir === undefined && options.outDir === undefined) {
       options.declaration = false;
-      tracker.recordWarning({
+      this.records.push({
+        category: RecordCategory.Warning,
         message:
           'The output of declaration files is disabled. Although "declaration" is set to `true` in the TSConfig, no output directory was specified.',
         description: [
@@ -213,12 +229,26 @@ export class Config {
         else options.tsBuildInfoFile = resolve(this.plugin.cwd, buildInfo);
       }
     } else if (options.tsBuildInfoFile === undefined) {
-      tracker.recordHint({
+      this.records.push({
+        category: RecordCategory.Hint,
         message:
           "It is recommended to specify a file for storing incremental compilation information to reduce rebuild time.",
         description: [
           'Specify "tsBuildInfoFile" in the TSConfig or "buildInfo" in the plugin options.',
           'You can silence this message by explicitly setting "buildInfo" to `false` in the plugin options.'
+        ]
+      });
+    }
+
+    // Lib Check
+    if (options.skipLibCheck === undefined && options.skipDefaultLibCheck === undefined) {
+      this.records.push({
+        category: RecordCategory.Hint,
+        message:
+          "It is recommended to skip the type checking of declaration files, as it can significantly reduce the initial build time.",
+        description: [
+          'Set "skipLibCheck" to `true` in the TSConfig.',
+          'You can silence this message by explicitly setting "skipLibCheck" to `false` in the TSConfig.'
         ]
       });
     }

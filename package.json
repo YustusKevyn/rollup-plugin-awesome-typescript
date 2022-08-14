@@ -22,18 +22,19 @@
     "screenshot.png"
   ],
   "scripts": {
-    "temp": "tsc --outDir temp --module nodeNext --incremental",
-    "build": "npm run temp && rollup -c rollup.config.js && cp src/types.d.ts lib/index.d.ts"
+    "build": "tsc --outDir build --module nodeNext --incremental",
+    "prepare": "npm run build && rollup -c rollup.config.js && cp src/types.d.ts lib/index.d.ts",
+    "postpublish": "echo '\u001b[1m\u001b[31mRemember to write release notes!\u001b[0m'"
   },
   "dependencies": {
     "true-case-path": "^2.2.1"
   },
   "devDependencies": {
+    "@types/node": "^18.7.3",
     "@types/semver": "^7.3.10",
     "@types/ts-expose-internals": "npm:ts-expose-internals@4.5.2",
     "prettier": "^2.7.1",
     "rollup": "^2.77.0",
-    "rollup-plugin-terser": "^7.0.2",
     "semver": "^7.3.7",
     "tslib": "2.4.0",
     "typescript": "^4.7.4"

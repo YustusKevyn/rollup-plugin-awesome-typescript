@@ -102,9 +102,12 @@ export class Plugin {
 
   public end(context: PluginContext) {
     let files = this.builder.build(context);
+
+    // Check
+    this.config.check();
     if (this.options.check !== false) this.checker.check(files);
 
-    // No emit on error
+    // No emit
     if (this.config.store.options.noEmitOnError && this.tracker.errors) {
       this.tracker.print(true);
       throw {

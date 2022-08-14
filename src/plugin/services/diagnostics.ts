@@ -8,13 +8,13 @@ import { RecordCategory } from "../constants";
 export class Diagnostics {
   constructor(private plugin: Plugin) {}
 
-  record(diagnostics: Readonly<Diagnostic> | Readonly<Diagnostic[]>) {
+  public record(diagnostics: Readonly<Diagnostic> | Readonly<Diagnostic[]>) {
     for (let diagnostic of Array.isArray(diagnostics) ? diagnostics : [diagnostics]) {
       this.plugin.tracker.record(this.toRecord(diagnostic));
     }
   }
 
-  private toRecord(diagnostic: Diagnostic) {
+  public toRecord(diagnostic: Diagnostic) {
     let compiler = this.plugin.compiler.instance,
       record: Record = {
         code: "TS" + diagnostic.code,

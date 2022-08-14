@@ -1,6 +1,4 @@
-const { awesomeTypescript } = require("./temp");
-
-import { terser } from "rollup-plugin-terser";
+const { awesomeTypescript } = require("./build");
 
 const config = {
   input: "src/index.ts",
@@ -14,6 +12,6 @@ const config = {
       format: "esm"
     }
   ],
-  plugins: [awesomeTypescript(), terser()]
+  plugins: [awesomeTypescript()]
 };
 export default config;
