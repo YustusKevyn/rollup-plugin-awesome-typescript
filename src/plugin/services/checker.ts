@@ -1,4 +1,4 @@
-import type { Plugin } from "..";
+import type { Plugin } from "../plugin";
 import type { Diagnostic } from "typescript";
 
 import { concat } from "../../util/data";

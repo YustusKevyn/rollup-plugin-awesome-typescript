@@ -1,4 +1,4 @@
-import type { Plugin } from "..";
+import type { Plugin } from "../plugin";
 import type { GenericRecord, Record } from "../types";
 
 import { apply } from "../../util/ansi";

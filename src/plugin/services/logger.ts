@@ -1,5 +1,5 @@
-import type { Plugin } from "..";
-import type { Message, Position, Record, RecordChild } from "../types";
+import type { Plugin } from "../plugin";
+import type { Message, Position, Record } from "../types";
 import type { Color, Styles } from "../../util/ansi";
 
 import { relative } from "path";

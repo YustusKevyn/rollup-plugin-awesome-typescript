@@ -1,5 +1,5 @@
-import type { Plugin } from "..";
 import type { Build } from "../types";
+import type { Plugin } from "../plugin";
 import type { PluginContext } from "rollup";
 
 import { endsWith } from "../../util/data";

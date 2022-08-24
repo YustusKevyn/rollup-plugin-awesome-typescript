@@ -1,4 +1,4 @@
-import type { Plugin } from "..";
+import type { Plugin } from "../plugin";
 import type { ChangeEvent } from "rollup";
 
 import { some } from "../../util/data";

@@ -1,4 +1,4 @@
-import type { Plugin } from "..";
+import type { Plugin } from "../plugin";
 
 import { mkdirSync, writeFileSync } from "fs";
 import { dirname, join, relative } from "path";

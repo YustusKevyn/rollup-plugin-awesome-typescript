@@ -1,5 +1,5 @@
-import type { Plugin } from "..";
 import type { File } from "../types";
+import type { Plugin } from "../plugin";
 import type { CompilerHost, SemanticDiagnosticsBuilderProgram } from "typescript";
 
 import { FileKind } from "../constants";

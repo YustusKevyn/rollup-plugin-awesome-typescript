@@ -1,4 +1,4 @@
-import type { Plugin } from "..";
+import type { Plugin } from "../plugin";
 
 export class Filter {
   public json: Set<string> = new Set();

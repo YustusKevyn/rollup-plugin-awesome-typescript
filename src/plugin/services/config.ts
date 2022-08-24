@@ -1,5 +1,5 @@
-import type { Plugin } from "..";
 import type { Record } from "../types";
+import type { Plugin } from "../plugin";
 import type {
   CompilerOptions,
   ModuleKind,

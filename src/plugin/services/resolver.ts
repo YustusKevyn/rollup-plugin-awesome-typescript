@@ -1,4 +1,4 @@
-import type { Plugin } from "..";
+import type { Plugin } from "../plugin";
 import type { ModuleResolutionCache, ModuleResolutionHost } from "typescript";
 
 import { normaliseCase } from "../../util/path";

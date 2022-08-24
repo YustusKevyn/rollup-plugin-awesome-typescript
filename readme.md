@@ -59,99 +59,89 @@ export default {
 
 ## Plugin Options
 
-<dl>
-  <dt><h4><code>check</code></h4></dt>
-  <dd>
-    <p>Type: <code>boolean</code><br/>Default: <code>true</code></p>
-    <p>Specifies whether to enable type checking.</p>
-  </dd>
+#### _`check`_
 
-  <dt><h4><code>cwd</code></h4></dt>
-  <dd>
-    <p>Type: <code>string</code><br/>Default: <code>process.cwd()</code></p>
-    <p>Specifies the current working directory.</p>
-  </dd>
+Type: `boolean`  
+Default: `true`
 
-  <dt><h4><code>context</code></h4></dt>
-  <dd>
-    <p>Type: <code>string</code><br/>Default: The directory containing the TSConfig</p>
-    <p>Specifies the base path used to parse the TSConfig. Relative paths 
-    within the configuration are resolved with respect to this path.</p>
-  </dd>
+Specifies whether to enable type checking.
 
-  <dt><h4><code>config</code></h4></dt>
-  <dd>
-    <p>Type: <code>string</code><br/>Default: <code>"tsconfig.json"</code></p>
-    <p>
-      Specifies the location of the TSConfig. Can be one of the following:
-      <ul>
-        <li>A relative or absolute path</li>
-        <li>A filename to search for in the directory tree, starting from the 
-        current working directory</li>
-      </ul>
-    </p>
-  </dd>
+#### _`cwd`_
 
-  <dt><h4><code>compiler</code></h4></dt>
-  <dd>
-    <p>Type: <code>string</code><br/>Default: <code>"typescript"</code></p>
-    <p>
-      Specifies the TypeScript compiler to use. Can be one of the following:
-      <ul>
-        <li>A relative or absolute path pointing to a package or an entry file</li>
-        <li>The name of a local dependency</li>
-      </ul>
-    </p>
-  </dd>
+Type: `string`  
+Default: `process.cwd()`
 
-  <dt><h4><code>helpers</code></h4></dt>
-  <dd>
-    <p>Type: <code>string</code><br/>Default: <code>"tslib"</code></p>
-    <p>
-      Specifies the TypeScript helper library to use. Can be one of the following:
-      <ul>
-        <li>A relative or absolute path pointing to a package or an entry file</li>
-        <li>The name of a local dependency</li>
-      </ul>
-    </p>
-  </dd>
+Specifies the current working directory.
 
-  <dt><h4><code>declarations</code></h4></dt>
-  <dd>
-    <p>Type: <code>string</code> | <code>boolean</code></p>
-    <p>
-      Overwrites the TSConfig options that determine if and where to output 
-      declaration files. Can be one of the following:
-      <ul>
-        <li>A directory name, relative or absolute path to enable the output at 
-        the specified location</li>
-        <li><code>true</code> to enable the output using <code>"declarationDir"</code> 
-        of the TSConfig as the location</li>
-        <li><code>false</code> to explicitly disable the output of declaration 
-        files</li>
-      </ul>
-      If undefined, the corresponding options in the TSConfig are used as is.
-    </p>
-  </dd>
+#### _`context`_
 
-  <dt><h4><code>buildInfo</code></h4></dt>
-  <dd>
-    <p>Type: <code>string</code> | <code>boolean</code></p>
-    <p>
-      Overwrites the TSConfig options that determine if and where to store 
-      incremental compilation information. Can be one of the following:
-      <ul>
-        <li>A directory name, relative or absolute path to enable the output at 
-        the specified location</li>
-        <li><code>true</code> to enable the output using <code>"tsBuildInfoFile"</code> 
-        of the TSConfig as the location</li>
-        <li><code>false</code> to explicitly disable the output of incremental 
-        compilation information</li>
-      </ul>
-      If undefined, the corresponding options in the TSConfig are used as is.
-    </p>
-  </dd>
-</dl>
+Type: `string`  
+Default: The directory containing the TSConfig
+
+Specifies the base path used to parse the TSConfig. Relative paths within the
+TSConfig are resolved with respect to this path.
+
+#### _`config`_
+
+Type: `string`  
+Default: `"tsconfig.json"`
+
+Specifies the location of the TSConfig. Can be one of the following:
+
+- A relative or absolute path
+- A filename to search for in the directory tree, starting from the current
+  working directory
+
+#### _`compiler`_
+
+Type: `string`  
+Default: `"typescript"`
+
+Specifies the TypeScript compiler to use. Can be one of the following:
+
+- A relative or absolute path pointing to a package or an entry file
+- The name of a local dependency
+
+#### _`helpers`_
+
+Type: `string`  
+Default: `"tslib"`
+
+Specifies the TypeScript helper library to use. Can be one of the
+following:
+
+- A relative or absolute path pointing to a package or an entry file
+- The name of a local dependency
+
+#### _`declarations`_
+
+Type: `string` | `boolean`  
+Default: TSConfig options
+
+Overwrites the TSConfig options that determine if and where to store
+incremental compilation information. Can be one of the following:
+
+- A directory name, relative or absolute path to enable the output at the
+  specified location
+- `true` to enable the output using `"declarationDir"` of the TSConfig as the
+  location
+- `false` to explicitly disable the output of declaration files
+
+If undefined, the corresponding options in the TSConfig are used as is.
+
+#### _`buildInfo`_
+
+Type: `string` | `boolean`  
+Default: TSConfig options
+
+Overwrites the TSConfig options that determine if and where to output
+declaration files. Can be one of the following:
+
+- A directory name, relative or absolute path to enable the output at the
+  specified location
+- `true` to enable the output using `"tsBuildInfoFile"` in the TSConfig as the
+- location
+- `false` to explicitly disable the output of declaration files
 
 ## TSConfig Options
 

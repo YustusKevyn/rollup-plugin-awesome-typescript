@@ -1,4 +1,4 @@
-import type { Plugin } from "..";
+import type { Plugin } from "../plugin";
 import type typescript from "typescript";
 
 import { lt } from "semver";

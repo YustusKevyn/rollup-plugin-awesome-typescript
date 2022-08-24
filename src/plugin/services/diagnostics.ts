@@ -1,4 +1,4 @@
-import type { Plugin } from "..";
+import type { Plugin } from "../plugin";
 import type { Record, RecordChild } from "../types";
 import type { Diagnostic, DiagnosticCategory, DiagnosticMessageChain, SourceFile } from "typescript";
 

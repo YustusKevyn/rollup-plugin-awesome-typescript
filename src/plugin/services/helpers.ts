@@ -1,4 +1,4 @@
-import type { Plugin } from "..";
+import type { Plugin } from "../plugin";
 
 import { lt } from "semver";
 import { join, resolve } from "path";

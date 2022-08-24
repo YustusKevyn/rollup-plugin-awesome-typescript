@@ -18,13 +18,11 @@
   "module": "lib/index.mjs",
   "types": "lib/index.d.ts",
   "files": [
-    "lib/**/*",
-    "screenshot.png"
+    "lib"
   ],
   "scripts": {
     "build": "tsc --outDir build --module nodeNext --incremental",
-    "prepare": "npm run build && rollup -c rollup.config.js && cp src/types.d.ts lib/index.d.ts",
-    "postpublish": "echo '\u001b[1m\u001b[31mRemember to write release notes!\u001b[0m'"
+    "prepare": "npm run build && rollup -c rollup.config.js && cp src/types.d.ts lib/index.d.ts"
   },
   "dependencies": {
     "true-case-path": "^2.2.1"

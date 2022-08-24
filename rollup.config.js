@@ -1,4 +1,4 @@
-const { awesomeTypescript } = require("./build");
+import { awesomeTypescript } from "./build";
 
 const config = {
   input: "src/index.ts",

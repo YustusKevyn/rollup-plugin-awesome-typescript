@@ -1,125 +1,61 @@
 import type { Options } from "../types";
-import type { LoadResult, PluginContext } from "rollup";
+import type { Plugin as RollupPlugin } from "rollup";
 
-import { Builder } from "./services/builder";
-import { Checker } from "./services/checker";
-import { Config } from "./services/config";
-import { Compiler } from "./services/compiler";
-import { Diagnostics } from "./services/diagnostics";
-import { Emitter } from "./services/emitter";
-import { Filter } from "./services/filter";
-import { Helpers } from "./services/helpers";
-import { Logger } from "./services/logger";
-import { Program } from "./services/program";
-import { Resolver } from "./services/resolver";
-import { Tracker } from "./services/tracker";
-import { Watcher } from "./services/watcher";
+import { Plugin } from "./plugin";
 
-import { apply } from "../util/ansi";
-import { EmptyLine } from "./constants";
-import { normalise, trueCase } from "../util/path";
+export default function awesomeTypescript(options?: Options): RollupPlugin {
+  let plugin = new Plugin(options ?? {});
+  return {
+    name: "Awesome Typescript",
+    watchChange(id, change) {
+      return plugin.watcher.register(id, change.event);
+    },
+    options() {
+      return plugin.init();
+    },
+    buildStart() {
+      return plugin.start(this);
+    },
+    resolveId(id, origin) {
+      return plugin.resolve(id, origin);
+    },
+    load(id) {
+      return plugin.process(id);
+    },
+    buildEnd() {
+      /*
+       * This is the only point where the plugin can determine if additional
+       * files need to be watched. Rollup, however, doesn't allow
+       * `this.addWatchFile` to be called from within the `buildEnd` hook, even
+       * though there would be no problems with it whatsoever
+       * (https://github.com/rollup/rollup/issues/4599).
+       *
+       * Until this is implemented by Rollup, a patch is applied that allows
+       * the plugin to access the list of watched files. This is done by
+       * retrieving the `this` value of a bound function thereby exposing
+       * Rollup's internal graph.
+       */
 
-export class Plugin {
-  private state = {
-    cycle: 0,
-    initialised: false
+      // @ts-ignore
+      let graph = this.parse.__this;
+      return plugin.end({
+        ...this,
+        addWatchFile: id => (graph.watchFiles[id] = true)
+      });
+    }
   };
-
-  readonly cwd: string = normalise(process.cwd());
-  readonly context?: string;
-
-  readonly logger = new Logger(this);
-  readonly tracker = new Tracker(this);
-  readonly diagnostics = new Diagnostics(this);
-
-  readonly compiler = new Compiler(this);
-  readonly helpers = new Helpers(this);
-  readonly config = new Config(this);
-
-  readonly resolver = new Resolver(this);
-  readonly filter = new Filter(this);
-  readonly watcher = new Watcher(this);
-
-  readonly program = new Program(this);
-  readonly builder = new Builder(this);
-  readonly checker = new Checker(this);
-  readonly emitter = new Emitter(this);
-
-  constructor(readonly options: Options) {
-    if (options.cwd) this.cwd = normalise(options.cwd, this.cwd);
-    if (options.context) this.context = normalise(options.context, this.cwd);
-  }
-
-  public init() {
-    this.tracker.reset();
-    this.logger.log([EmptyLine, apply("Awesome TypeScript", "underline")]);
-
-    let core = this.compiler.init() && this.helpers.init() && this.config.init();
-    if (!core) {
-      this.tracker.print();
-      throw {
-        plugin: "Awesome TypeScript",
-        message: "Compilation failed. Check the error messages above.",
-        stack: undefined
-      };
-    }
-
-    if (!this.state.initialised) {
-      this.resolver.init();
-      this.program.init();
-      this.state.initialised = true;
-    }
-  }
-
-  public start(context: PluginContext) {
-    this.state.cycle++;
-    this.watcher.update();
-    for (let path of this.filter.configs) context.addWatchFile(trueCase(path));
-  }
-
-  public resolve(id: string, origin?: string) {
-    if (id === "tslib") return this.helpers.path;
-    if (!origin) return null;
-
-    let path = this.resolver.resolvePath(id, origin);
-    if (!path || !this.filter.isModule(path)) return null;
-    return trueCase(path);
-  }
-
-  public process(id: string) {
-    let path = this.resolver.toPath(id);
-    if (!this.filter.isModule(path)) return null;
-
-    // Output
-    let output = this.builder.getJs(path);
-    if (!output?.text) return null;
-
-    // Result
-    let result: LoadResult = { code: output.text };
-    if (output.map) result.map = JSON.parse(output.map);
-    return result;
-  }
-
-  public end(context: PluginContext) {
-    let files = this.builder.build(context);
-
-    // Check
-    this.config.check();
-    if (this.options.check !== false) this.checker.check(files);
-
-    // No emit
-    if (this.config.store.options.noEmitOnError && this.tracker.errors) {
-      this.tracker.print(true);
-      throw {
-        plugin: "Awesome TypeScript",
-        message: "Compilation failed. Check the error messages above.",
-        watchFiles: context.getWatchFiles(),
-        stack: undefined
-      };
-    }
-
-    // Emit
-    this.emitter.emit(files);
-    this.tracker.print(true);
-  }
 }
+
+/*
+ * This allows access to the `this` value of bound functions, which is crucial
+ * for a patch that's applied during the `buildEnd` hook.
+ */
+
+// @ts-ignore
+Function.prototype.__bind = Function.prototype.bind;
+Function.prototype.bind = function (...args) {
+  // @ts-ignore
+  let fn = this.__bind(...args);
+  fn.__this = args[0];
+  return fn;
+};
