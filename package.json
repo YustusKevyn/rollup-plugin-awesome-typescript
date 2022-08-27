@@ -21,7 +21,7 @@
     "lib"
   ],
   "scripts": {
-    "build": "tsc --outDir build --module nodeNext --incremental",
+    "build": "tsc --outDir build --module nodeNext --incremental --declaration",
     "prepare": "npm run build && rollup -c rollup.config.js && cp src/types.d.ts lib/index.d.ts"
   },
   "dependencies": {

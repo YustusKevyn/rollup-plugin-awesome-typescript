@@ -1,7 +1,7 @@
 import type { Plugin } from "../plugin";
 import type { Diagnostic } from "typescript";
 
-import { concat } from "../../util/data";
+import { concat } from "../util/data";
 
 export class Checker {
   constructor(private plugin: Plugin) {}

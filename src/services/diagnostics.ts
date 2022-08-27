@@ -2,7 +2,7 @@ import type { Plugin } from "../plugin";
 import type { Record, RecordChild } from "../types";
 import type { Diagnostic, DiagnosticCategory, DiagnosticMessageChain, SourceFile } from "typescript";
 
-import { apply } from "../../util/ansi";
+import { apply, Color, Mode } from "../util/ansi";
 import { RecordCategory } from "../constants";
 
 export class Diagnostics {
@@ -74,10 +74,10 @@ export class Diagnostics {
       gutterWidth = (endLine + 1).toString().length,
       snippet: string[] = [];
 
-    if (startLine - padding < 0) snippet.push(apply(" ".repeat(gutterWidth) + " ┬", "grey"));
+    if (startLine - padding < 0) snippet.push(apply(" ".repeat(gutterWidth) + " ┬", Color.Grey));
     for (let i = startLine; i <= endLine; i++) {
       if (lines > maxLines && i === start.line + placeholder + 1) {
-        let hidden = apply(" ".repeat(gutterWidth) + " ╎", "grey");
+        let hidden = apply(" ".repeat(gutterWidth) + " ╎", Color.Grey);
         for (let j = 0; j < placeholder; j++) snippet.push(hidden);
         i = end.line - placeholder;
       }
@@ -85,21 +85,21 @@ export class Diagnostics {
       let lineStart = compiler.getPositionOfLineAndCharacter(source, i, 0),
         lineEnd = i === lastLine ? source.text.length : compiler.getPositionOfLineAndCharacter(source, i + 1, 0),
         lineContent = source.text.slice(lineStart, lineEnd).trimEnd(),
-        final = apply((i + 1).toString().padStart(gutterWidth) + " │ ", "grey") + " ";
+        final = apply((i + 1).toString().padStart(gutterWidth) + " │ ", Color.Grey) + " ";
 
-      if (i < start.line || i > end.line) final += apply(lineContent, "dim");
+      if (i < start.line || i > end.line) final += apply(lineContent, Mode.Dim);
       else {
         let lineErrorStart = i === start.line ? start.character : 0,
           lineErrorEnd = i === end.line ? end.character : lineContent.length;
 
-        final += apply(lineContent.slice(0, lineErrorStart), "dim");
-        final += apply(lineContent.slice(lineErrorStart, lineErrorEnd), "brightWhite", "bold", "italic");
-        final += apply(lineContent.slice(lineErrorEnd), "dim");
+        final += apply(lineContent.slice(0, lineErrorStart), Mode.Dim);
+        final += apply(lineContent.slice(lineErrorStart, lineErrorEnd), Color.BrightWhite, Mode.Bold, Mode.Italic);
+        final += apply(lineContent.slice(lineErrorEnd), Mode.Dim);
       }
 
       snippet.push(final);
     }
-    if (endLine + padding > lastLine) snippet.push(apply(" ".repeat(gutterWidth) + " ┴", "grey"));
+    if (endLine + padding > lastLine) snippet.push(apply(" ".repeat(gutterWidth) + " ┴", Color.Grey));
 
     return snippet;
   }

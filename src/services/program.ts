@@ -4,9 +4,9 @@ import type { CompilerHost, SemanticDiagnosticsBuilderProgram } from "typescript
 
 import { FileKind } from "../constants";
 import { readFileSync } from "fs";
-import { normaliseCase } from "../../util/path";
-import { fileExists, isCaseSensitive } from "../../util/fs";
-import { compareArrays, compareObjects, endsWith } from "../../util/data";
+import { normaliseCase } from "../util/path";
+import { fileExists, isCaseSensitive } from "../util/fs";
+import { compareArrays, compareObjects, endsWith } from "../util/data";
 
 export class Program {
   public host!: CompilerHost;

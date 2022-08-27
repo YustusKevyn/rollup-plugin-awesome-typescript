@@ -1,3 +1,12 @@
-import awesomeTypescript from "./plugin";
+import type { Options } from "./types";
 
-export { awesomeTypescript };
+import { Plugin } from "./plugin";
+import { LogLevel } from "./constants";
+import { toRollupPlugin } from "./util/rollup";
+
+function awesomeTypescript(options: Options = {}) {
+  return toRollupPlugin(new Plugin(options));
+}
+
+export { awesomeTypescript, LogLevel, Options };
+export default awesomeTypescript;

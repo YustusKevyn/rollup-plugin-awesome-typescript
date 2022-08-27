@@ -36,9 +36,6 @@ npm i -D rollup-plugin-awesome-typescript typescript tslib
 > and `tslib` (≥ 2.4.0) separately or provide your own compatible
 > implementations for them (using the plugin options)
 
-> **Disclaimer: This plugin is still in its early days. Bugs might lurk in the
-> dark!**
-
 ## Usage
 
 Just import and include the plugin in your

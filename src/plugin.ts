@@ -1,5 +1,5 @@
-import type { Options } from "../types";
-import type { LoadResult, PluginContext } from "rollup";
+import type { Options } from "./types";
+import type { LoadResult, MinimalPluginContext, PluginContext } from "rollup";
 
 import { Builder } from "./services/builder";
 import { Checker } from "./services/checker";
@@ -15,12 +15,14 @@ import { Resolver } from "./services/resolver";
 import { Tracker } from "./services/tracker";
 import { Watcher } from "./services/watcher";
 
-import { apply } from "../util/ansi";
-import { EmptyLine } from "./constants";
-import { normalise, trueCase } from "../util/path";
+import { EmptyLine, PluginMode } from "./constants";
+
+import { apply, Mode } from "./util/ansi";
+import { normalise, trueCase } from "./util/path";
 
 export class Plugin {
-  private state = {
+  readonly state = {
+    mode: PluginMode.Build,
     cycle: 0,
     initialised: false
   };
@@ -28,7 +30,7 @@ export class Plugin {
   readonly cwd: string = normalise(process.cwd());
   readonly context?: string;
 
-  readonly logger = new Logger(this);
+  readonly logger: Logger;
   readonly tracker = new Tracker(this);
   readonly diagnostics = new Diagnostics(this);
 
@@ -46,13 +48,16 @@ export class Plugin {
   readonly emitter = new Emitter(this);
 
   constructor(readonly options: Options) {
+    this.logger = new Logger(this, options.logLevel);
     if (options.cwd) this.cwd = normalise(options.cwd, this.cwd);
     if (options.context) this.context = normalise(options.context, this.cwd);
   }
 
-  public init() {
+  public init(context: MinimalPluginContext) {
+    if (context.meta.watchMode) this.state.mode = PluginMode.Watch;
+
     this.tracker.reset();
-    this.logger.log([EmptyLine, apply("Awesome TypeScript", "underline")]);
+    this.logger.log([EmptyLine, apply("Awesome TypeScript", Mode.Underline)]);
 
     let core = this.compiler.init() && this.helpers.init() && this.config.init();
     if (!core) {

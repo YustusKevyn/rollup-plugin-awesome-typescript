@@ -11,9 +11,9 @@ import type {
 
 import { dirname, isAbsolute, join, resolve } from "path";
 import { RecordCategory } from "../constants";
-import { concat } from "../../util/data";
-import { fileExists, isCaseSensitive } from "../../util/fs";
-import { isPath, isSubPath, normalise } from "../../util/path";
+import { concat } from "../util/data";
+import { fileExists, isCaseSensitive } from "../util/fs";
+import { isPath, isSubPath, normalise } from "../util/path";
 
 export class Config {
   private records: Record[] = [];

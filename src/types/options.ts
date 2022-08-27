@@ -1,6 +1,8 @@
-export function awesomeTypescript(options?: Options): any;
+import type { LogLevel } from "../constants";
 
 export interface Options {
+  logLevel?: LogLevel | undefined;
+
   /**
    * Specifies the current working directory.
    *

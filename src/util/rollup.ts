@@ -1,17 +1,28 @@
-import type { Options } from "../types";
+import type { Plugin } from "../plugin";
 import type { Plugin as RollupPlugin } from "rollup";
 
-import { Plugin } from "./plugin";
+/*
+ * This allows access to the `this` value of bound functions, which is crucial
+ * for a patch that's applied during the `buildEnd` hook.
+ */
 
-export default function awesomeTypescript(options?: Options): RollupPlugin {
-  let plugin = new Plugin(options ?? {});
+// @ts-ignore
+Function.prototype.__bind = Function.prototype.bind;
+Function.prototype.bind = function (...args) {
+  // @ts-ignore
+  let fn = this.__bind(...args);
+  fn.__this = args[0];
+  return fn;
+};
+
+export function toRollupPlugin(plugin: Plugin): RollupPlugin {
   return {
     name: "Awesome Typescript",
     watchChange(id, change) {
       return plugin.watcher.register(id, change.event);
     },
     options() {
-      return plugin.init();
+      return plugin.init(this);
     },
     buildStart() {
       return plugin.start(this);
@@ -45,17 +56,3 @@ export default function awesomeTypescript(options?: Options): RollupPlugin {
     }
   };
 }
-
-/*
- * This allows access to the `this` value of bound functions, which is crucial
- * for a patch that's applied during the `buildEnd` hook.
- */
-
-// @ts-ignore
-Function.prototype.__bind = Function.prototype.bind;
-Function.prototype.bind = function (...args) {
-  // @ts-ignore
-  let fn = this.__bind(...args);
-  fn.__this = args[0];
-  return fn;
-};

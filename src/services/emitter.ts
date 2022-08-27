@@ -2,9 +2,9 @@ import type { Plugin } from "../plugin";
 
 import { mkdirSync, writeFileSync } from "fs";
 import { dirname, join, relative } from "path";
-import { intersection } from "../../util/data";
-import { isSubPath, normaliseCase } from "../../util/path";
-import { directoryExists } from "../../util/fs";
+import { intersection } from "../util/data";
+import { isSubPath, normaliseCase } from "../util/path";
+import { directoryExists } from "../util/fs";
 
 export class Emitter {
   readonly declarations = {

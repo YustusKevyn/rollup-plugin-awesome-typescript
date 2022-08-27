@@ -3,8 +3,8 @@ import type typescript from "typescript";
 
 import { lt } from "semver";
 import { join, resolve } from "path";
-import { apply } from "../../util/ansi";
-import { isDistinct, isRelative, normalise } from "../../util/path";
+import { apply, Color } from "../util/ansi";
+import { isDistinct, isRelative, normalise } from "../util/path";
 
 export class Compiler {
   private state!: {
@@ -27,11 +27,11 @@ export class Compiler {
     let header = [],
       title = " • Using compiler ";
     if (!this.state.name) title += "at " + this.plugin.logger.formatPath(this.state.path);
-    else title += apply(this.state.name, "yellow") + (this.state.version ? " v" + this.state.version : "");
+    else title += apply(this.state.name, Color.Yellow) + (this.state.version ? " v" + this.state.version : "");
     header.push(title);
 
     if (!this.state.supported)
-      header.push(apply("   This compiler may not be compatible with Awesome TypeScript", "grey"));
+      header.push(apply("   This compiler may not be compatible with Awesome TypeScript", Color.Grey));
 
     this.plugin.logger.log(header);
     return true;

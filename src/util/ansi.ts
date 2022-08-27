@@ -1,62 +1,64 @@
-import type { StringLike } from "./types";
-
 const ESC = "\u001b";
 
-const Colors = {
-  black: 30,
-  red: 31,
-  green: 32,
-  yellow: 33,
-  blue: 34,
-  magenta: 35,
-  cyan: 36,
-  white: 37,
-  grey: 90
-};
+type StringLike = { toString(): string };
 
-const Modes = {
-  bold: 1,
-  dim: 2,
-  italic: 3,
-  underline: 4,
-  inverse: 7,
-  hidden: 8,
-  strikethrough: 9
-};
-
-export type Style = Mode | Color | BrightColor | BackgroundColor;
+export type Style = Mode | Color | Background;
 export type Styles = (Style | undefined)[];
 
-export type Mode = keyof typeof Modes;
-export type Color = keyof typeof Colors;
-export type BrightColor = `bright${Capitalize<Color>}`;
-export type BackgroundColor = `bg${Capitalize<Color>}`;
+export enum Mode {
+  Bold = 1,
+  Dim = 2,
+  Italic = 3,
+  Underline = 4,
+  Inverse = 7,
+  Hidden = 8,
+  Strikethrough = 9
+}
+
+export enum Color {
+  Black = 30,
+  Red = 31,
+  Green = 32,
+  Yellow = 33,
+  Blue = 34,
+  Magenta = 35,
+  Cyan = 36,
+  White = 37,
+  Grey = 90,
+  BrightRed = 91,
+  BrightGreen = 92,
+  BrightYellow = 93,
+  BrightBlue = 94,
+  BrightMagenta = 95,
+  BrightCyan = 96,
+  BrightWhite = 97
+}
+
+export enum Background {
+  Black = 40,
+  Red = 41,
+  Green = 42,
+  Yellow = 43,
+  Blue = 44,
+  Magenta = 45,
+  Cyan = 46,
+  White = 47,
+  Grey = 100
+}
 
 export function apply(str: StringLike, ...styles: Styles) {
   for (let style of styles) {
     if (!style) continue;
-    if (style in Modes) str = applyMode(str, style as Mode);
-    else if (style in Colors) str = applyColor(str, style as Color);
-    else if (style.startsWith("bright")) str = applyBrightColor(str, style.slice(6).toLowerCase() as Color);
-    else if (style.startsWith("bg")) str = applyBackgroundColor(str, style.slice(2).toLowerCase() as Color);
+    str =
+      ESC +
+      "[" +
+      style +
+      "m" +
+      str +
+      ESC +
+      "[" +
+      (style >= 100 ? 49 : style >= 90 ? 39 : style >= 40 ? 49 : style >= 30 ? 39 : style === 1 ? 22 : style + 20) +
+      "m";
   }
   return str as string;
-}
-
-export function applyMode(str: StringLike, mode: Mode) {
-  let code = Modes[mode],
-    revert = code === 1 ? 22 : code + 20;
-  return ESC + "[" + code + "m" + str + ESC + "[" + revert + "m";
-}
-
-export function applyColor(str: StringLike, color: Color) {
-  return ESC + "[" + Colors[color] + "m" + str + ESC + "[39m";
-}
-
-export function applyBrightColor(str: StringLike, color: Color) {
-  return ESC + "[" + (Colors[color] + 60) + "m" + str + ESC + "[39m";
-}
-
-export function applyBackgroundColor(str: StringLike, color: Color) {
-  return ESC + "[" + (Colors[color] + 10) + "m" + str + ESC + "[49m";
 }

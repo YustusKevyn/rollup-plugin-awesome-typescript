@@ -1,8 +1,8 @@
 import type { Plugin } from "../plugin";
 import type { GenericRecord, Record } from "../types";
 
-import { apply } from "../../util/ansi";
-import { EmptyLine, RecordCategory } from "../constants";
+import { apply, Color, Mode } from "../util/ansi";
+import { EmptyLine, LogLevel, RecordCategory } from "../constants";
 
 export class Tracker {
   private records: Record[] = [];
@@ -38,7 +38,16 @@ export class Tracker {
 
     // Records
     logger.log(EmptyLine);
-    for (let record of this.records) logger.log(logger.formatRecord(record));
+    for (let record of this.records) {
+      logger.log(
+        logger.formatRecord(record),
+        record.category === RecordCategory.Error
+          ? LogLevel.Error
+          : record.category === RecordCategory.Warning
+          ? LogLevel.Warning
+          : LogLevel.Info
+      );
+    }
     if (stats) this.printStats();
   }
 
@@ -46,10 +55,10 @@ export class Tracker {
     let problems = this.errors + this.warnings,
       final;
 
-    if (!problems) final = `Awesome TypeScript compiled with ${apply("no problems", "green", "bold")}`;
+    if (!problems) final = `Awesome TypeScript compiled with ${apply("no problems", Color.Green, Mode.Bold)}`;
     else {
       final = "Awesome TypeScript compiled with ";
-      final += apply(`${problems} ${problems === 1 ? "problem" : "problems"}`, "bold", "red");
+      final += apply(`${problems} ${problems === 1 ? "problem" : "problems"}`, Color.Red, Mode.Bold);
       final += ` (${this.errors} ${this.errors === 1 ? "error" : "errors"}, `;
       final += `${this.warnings} ${this.warnings === 1 ? "warning" : "warnings"})`;
     }
