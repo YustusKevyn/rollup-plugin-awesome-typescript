@@ -16,7 +16,7 @@ export class Resolver {
 
   public update() {
     this.cache.clear();
-    this.cache.update(this.plugin.config.store.options);
+    this.cache.update(this.plugin.config.options);
   }
 
   public toPath(id: string) {
@@ -37,7 +37,7 @@ export class Resolver {
     return this.plugin.compiler.instance.resolveModuleName(
       id,
       origin,
-      this.plugin.config.store.options,
+      this.plugin.config.options,
       this.host,
       this.cache
     ).resolvedModule;
@@ -65,7 +65,7 @@ export class Resolver {
     return this.plugin.compiler.instance.createModuleResolutionCache(
       this.plugin.cwd,
       normaliseCase,
-      this.plugin.config.store.options
+      this.plugin.config.options
     );
   }
 }

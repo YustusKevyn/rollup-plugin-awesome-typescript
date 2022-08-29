@@ -115,7 +115,7 @@ following:
 Type: `string` | `boolean`  
 Default: TSConfig options
 
-Overwrites the TSConfig options that determine if and where to store
+Overrides the TSConfig options that determine if and where to store
 incremental compilation information. Can be one of the following:
 
 - A directory name, relative or absolute path to enable the output at the
@@ -131,7 +131,7 @@ If undefined, the corresponding options in the TSConfig are used as is.
 Type: `string` | `boolean`  
 Default: TSConfig options
 
-Overwrites the TSConfig options that determine if and where to output
+Overrides the TSConfig options that determine if and where to output
 declaration files. Can be one of the following:
 
 - A directory name, relative or absolute path to enable the output at the
@@ -143,7 +143,7 @@ declaration files. Can be one of the following:
 ## TSConfig Options
 
 While Awesome TypeScript respects your TSConfig options, some of them must be
-overwriten to work with Rollup, or are ignored because they are managed by
+overridden to work with Rollup, or are ignored because they are managed by
 Rollup itself.
 
 Forced options:

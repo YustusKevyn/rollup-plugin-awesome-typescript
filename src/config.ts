@@ -12,6 +12,6 @@ export default function () {
     declarations: false
   });
 
-  plugin.state.mode = PluginMode.Config;
+  plugin.mode = PluginMode.Config;
   return toRollupPlugin(plugin);
 }

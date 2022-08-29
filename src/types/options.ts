@@ -18,16 +18,7 @@ export interface Options {
    */
   context?: string | undefined;
 
-  /**
-   * Specifies the location of the TSConfig. Can be one of the following:
-   *
-   * - A relative or absolute path
-   * - A filename to search for in the directory tree, starting from the
-   *   current working directory
-   *
-   * Default is `"tsconfig.json"`
-   */
-  config?: string | undefined;
+  config?: string | object | false | undefined;
 
   /**
    * Specifies the TypeScript helper library to use. Can be one of the
@@ -58,7 +49,7 @@ export interface Options {
   check?: boolean | undefined;
 
   /**
-   * Overwrites the TSConfig options that determine if and where to output
+   * Overrides the TSConfig options that determine if and where to output
    * declaration files. Can be one of the following:
    *
    * - A directory name, relative or absolute path to enable the output at the
@@ -72,7 +63,7 @@ export interface Options {
   buildInfo?: string | boolean | undefined;
 
   /**
-   * Overwrites the TSConfig options that determine if and where to store
+   * Overrides the TSConfig options that determine if and where to store
    * incremental compilation information. Can be one of the following:
    *
    * - A directory name, relative or absolute path to enable the output at the

@@ -6,29 +6,28 @@ import { apply, Color } from "../util/ansi";
 import { isDistinct, isRelative, normalise } from "../util/path";
 
 export class Helpers {
-  private state!: {
-    path: string;
-    name?: string;
-    version?: string;
-    supported: boolean;
+  private loaded: boolean = false;
+
+  public path!: string;
+  private package?: {
+    name: string;
+    version: string;
   };
 
   constructor(private plugin: Plugin) {}
 
-  public get path() {
-    return this.state.path;
-  }
-
   public init() {
-    if (!this.state && !this.load()) return false;
+    if (!this.loaded && !this.load()) return false;
+    this.loaded = true;
 
     let header = [],
       title = " • Using helper library ";
-    if (!this.state.name) title += "at " + this.plugin.logger.formatPath(this.state.path);
-    else title += apply(this.state.name, Color.Yellow) + (this.state.version ? " v" + this.state.version : "");
+    if (!this.package) title += "at " + this.plugin.logger.formatPath(this.path);
+    else title += apply(this.package.name, Color.Yellow) + " v" + this.package.version;
     header.push(title);
 
-    if (!this.state.supported)
+    // Supported
+    if (this.package?.name !== "tslib")
       header.push(apply("   This helper library may not be compatible with Awesome TypeScript", Color.Grey));
 
     this.plugin.logger.log(header);
@@ -41,9 +40,8 @@ export class Helpers {
     if (isRelative(input)) input = resolve(this.plugin.cwd, input);
 
     // Path
-    let path: string;
     try {
-      path = normalise(require.resolve(input));
+      this.path = normalise(require.resolve(input));
     } catch {
       if (isDistinct(input))
         tracker.recordError({ message: "Could not find the specified helper library.", path: input });
@@ -51,30 +49,19 @@ export class Helpers {
       return false;
     }
 
-    // Config
-    let name,
-      version,
-      supported = false;
-
+    // Package
     try {
-      let config = require(join(input, "package.json"));
-      name = config.name;
-      version = config.version;
+      this.package = require(join(input, "package.json"));
     } catch {}
 
-    if (name === "tslib") {
-      if (typeof version !== "string" || lt(version, "2.4.0")) {
-        tracker.recordError({
-          message:
-            "This version of tslib is not compatible with Awesome TypeScript. Please upgrade to the latest release."
-        });
-        return false;
-      }
-      supported = true;
+    if (this.package?.name === "tslib" && lt(this.package.version, "2.4.0")) {
+      tracker.recordError({
+        message:
+          "This version of tslib is not compatible with Awesome TypeScript. Please upgrade to the latest release."
+      });
+      return false;
     }
 
-    // Save
-    this.state = { path, name, version, supported };
     return true;
   }
 }

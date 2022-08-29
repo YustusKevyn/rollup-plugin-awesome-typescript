@@ -21,11 +21,8 @@ import { apply, Mode } from "./util/ansi";
 import { normalise, trueCase } from "./util/path";
 
 export class Plugin {
-  readonly state = {
-    mode: PluginMode.Build,
-    cycle: 0,
-    initialised: false
-  };
+  public loaded: boolean = false;
+  public mode: PluginMode = PluginMode.Build;
 
   readonly cwd: string = normalise(process.cwd());
   readonly context?: string;
@@ -54,7 +51,7 @@ export class Plugin {
   }
 
   public init(context: MinimalPluginContext) {
-    if (context.meta.watchMode) this.state.mode = PluginMode.Watch;
+    if (context.meta.watchMode) this.mode = PluginMode.Watch;
 
     this.tracker.reset();
     this.logger.log([EmptyLine, apply("Awesome TypeScript", Mode.Underline)]);
@@ -69,15 +66,14 @@ export class Plugin {
       };
     }
 
-    if (!this.state.initialised) {
+    if (!this.loaded) {
       this.resolver.init();
       this.program.init();
-      this.state.initialised = true;
+      this.loaded = true;
     }
   }
 
   public start(context: PluginContext) {
-    this.state.cycle++;
     this.watcher.update();
     for (let path of this.filter.configs) context.addWatchFile(trueCase(path));
   }
@@ -113,7 +109,7 @@ export class Plugin {
     if (this.options.check !== false) this.checker.check(files);
 
     // No emit
-    if (this.config.store.options.noEmitOnError && this.tracker.errors) {
+    if (this.config.options.noEmitOnError && this.tracker.errors) {
       this.tracker.print(true);
       throw {
         plugin: "Awesome Typescript",

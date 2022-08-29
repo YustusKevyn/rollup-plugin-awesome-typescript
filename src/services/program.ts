@@ -31,7 +31,7 @@ export class Program {
     if (!program) return false;
 
     // Compiler options
-    if (!compareObjects(program.getCompilerOptions(), this.plugin.config.store.options)) return false;
+    if (!compareObjects(program.getCompilerOptions(), this.plugin.config.options)) return false;
 
     // Source files
     let oldSourceFiles = program.getSourceFiles();
@@ -87,7 +87,7 @@ export class Program {
 
     if (data === null) file = { kind: FileKind.Missing, version };
     else {
-      let source = compiler.createSourceFile(path, data, this.plugin.config.store.target);
+      let source = compiler.createSourceFile(path, data, this.plugin.config.resolved.target);
       source.version = version.toString();
       file = { kind: FileKind.Existing, version, source };
     }
@@ -104,7 +104,7 @@ export class Program {
 
     if (data === null) file = { kind: FileKind.Missing, version };
     else {
-      let source = this.plugin.compiler.instance.createSourceFile(path, data, this.plugin.config.store.target);
+      let source = this.plugin.compiler.instance.createSourceFile(path, data, this.plugin.config.resolved.target);
       source.version = version.toString();
       file = { kind: FileKind.Existing, version, source };
     }
@@ -151,11 +151,11 @@ export class Program {
   private createInstance() {
     return this.plugin.compiler.instance.createSemanticDiagnosticsBuilderProgram(
       Array.from(this.plugin.filter.roots.keys()),
-      this.plugin.config.store.options,
+      this.plugin.config.options,
       this.host,
       this.instance,
       undefined,
-      this.plugin.config.store.references
+      this.plugin.config.references
     );
   }
 }

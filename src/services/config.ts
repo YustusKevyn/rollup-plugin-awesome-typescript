@@ -1,5 +1,5 @@
-import type { Record } from "../types";
 import type { Plugin } from "../plugin";
+import type { Record } from "../types";
 import type {
   CompilerOptions,
   ModuleKind,
@@ -12,33 +12,34 @@ import type {
 import { dirname, isAbsolute, join, resolve } from "path";
 import { RecordCategory } from "../constants";
 import { concat } from "../util/data";
+import { isPath, isSubPath } from "../util/path";
 import { fileExists, isCaseSensitive } from "../util/fs";
-import { isPath, isSubPath, normalise } from "../util/path";
 
 export class Config {
+  private loaded: boolean = false;
   private records: Record[] = [];
 
-  private state!: {
-    path: string;
+  private host!: ParseConfigHost;
+  private file!: {
     base: string;
-    host: ParseConfigHost;
-    supportedModuleKinds: ModuleKind[];
+    path?: string;
+    source: TsConfigSourceFile;
   };
 
-  public store!: {
-    source: TsConfigSourceFile;
-    options: CompilerOptions;
+  public options!: CompilerOptions;
+  public references!: Readonly<ProjectReference[]>;
+  public resolved!: {
     target: ScriptTarget;
-    references: Readonly<ProjectReference[]>;
     declarations: string | false;
   };
 
   constructor(private plugin: Plugin) {}
 
   public init() {
-    if (!this.state && !this.load()) return false;
+    if (!this.loaded && !this.load()) return false;
+    this.loaded = true;
 
-    this.plugin.logger.log(` • Using TSConfig at ${this.plugin.logger.formatPath(this.state.path)}`);
+    if (this.file.path) this.plugin.logger.log(` • Using TSConfig at ${this.plugin.logger.formatPath(this.file.path)}`);
     return true;
   }
 
@@ -48,21 +49,22 @@ export class Config {
 
   public update() {
     let compiler = this.plugin.compiler.instance,
-      oldOptions = this.store.options;
+      oldOptions = this.options;
 
-    if (!fileExists(this.state.path)) {
+    // File
+    if (this.file.path && !fileExists(this.file.path)) {
       this.records.push({
         category: RecordCategory.Error,
         message: "TSConfig file does not exist anymore.",
-        path: this.state.path
+        path: this.file.path
       });
       return;
     }
-    this.load();
 
-    let { options } = this.store;
-    if (compiler.changesAffectModuleResolution(oldOptions, options)) this.plugin.resolver.update();
-    if (compiler.compilerOptionsAffectEmit(options, oldOptions)) {
+    // Reload
+    this.load();
+    if (compiler.changesAffectModuleResolution(oldOptions, this.options)) this.plugin.resolver.update();
+    if (compiler.compilerOptionsAffectEmit(this.options, oldOptions)) {
       this.plugin.builder.invalidateDeclarations();
       this.plugin.emitter.declarations.all = true;
     }
@@ -73,10 +75,10 @@ export class Config {
     let compiler = this.plugin.compiler.instance;
     this.plugin.filter.roots = this.plugin.resolver.toPaths(
       compiler.getFileNamesFromConfigSpecs(
-        this.store.source.configFileSpecs!,
-        this.state.base,
-        this.store.options,
-        this.state.host,
+        this.file.source.configFileSpecs!,
+        this.file.base,
+        this.options,
+        this.host,
         []
       ),
       this.rootFilter
@@ -85,79 +87,90 @@ export class Config {
   }
 
   private rootFilter = (path: string) => {
-    if (this.store.declarations && isSubPath(path, this.store.declarations)) return false;
+    if (this.resolved.declarations && isSubPath(path, this.resolved.declarations)) return false;
     return true;
   };
 
   private load() {
-    let input = this.plugin.options.config ?? "tsconfig.json",
-      tracker = this.plugin.tracker,
-      path;
-
-    // Path
-    if (isPath(input)) {
-      path = !isAbsolute(input) ? resolve(this.plugin.cwd, input) : input;
-      if (!fileExists(path)) {
-        tracker.recordError({ message: "TSConfig file does not exist.", path: path });
-        return false;
-      }
-    }
-
-    // Filename
-    else {
-      let dir = this.plugin.cwd,
-        parent = dirname(dir);
-
-      while (dir !== parent) {
-        let check = join(dir, input);
-        if (fileExists(check)) {
-          path = check;
-          break;
-        }
-
-        dir = parent;
-        parent = dirname(dir);
-      }
-
-      if (!path) {
-        tracker.recordError({ message: `TSConfig file with name "${input}" does not exist in directory tree.` });
-        return false;
-      }
-    }
-
-    // Save
-    this.state = {
-      path: normalise(path),
-      base: this.plugin.context ?? dirname(path),
-      host: this.createHost(),
-      supportedModuleKinds: this.getSupportedModuleKinds()
-    };
-    this.parse();
-    return true;
-  }
-
-  private parse() {
-    let compiler = this.plugin.compiler.instance;
+    if (!this.host) this.host = this.createHost();
     this.records = [];
 
-    let source = compiler.readJsonConfigFile(this.state.path, compiler.sys.readFile),
-      config = compiler.parseJsonSourceFileConfigFileContent(source, this.state.host, this.state.base);
+    let input = this.plugin.options.config ?? "tsconfig.json",
+      compiler = this.plugin.compiler.instance;
+
+    if (typeof input === "string") {
+      let path = this.find(input);
+      if (!path) return;
+
+      this.file = {
+        path,
+        base: this.plugin.context ?? dirname(path),
+        source: compiler.readJsonConfigFile(path, compiler.sys.readFile)
+      };
+    } else {
+      let json = "{}";
+      if (typeof input === "object") {
+        // ******** W I P ! ******** //
+        // CONVERT ENUMS
+        // TRY CATCH
+        // REMOVE LOCATION IN ERRORS
+        // ADD INIT LOG INFO
+        json = JSON.stringify(input);
+      }
+
+      this.file = {
+        base: this.plugin.context ?? this.plugin.cwd,
+        source: compiler.parseJsonText("tsconfig.json", json)
+      };
+    }
+
+    // Config
+    let config = compiler.parseJsonSourceFileConfigFileContent(this.file.source, this.host, this.file.base);
     for (let error of config.errors) this.records.push(this.plugin.diagnostics.toRecord(error));
 
-    let options = this.normaliseOptions(config.options),
-      declarations = options.declaration ? (options.declarationDir || options.outDir)! : false;
-
-    this.store = {
-      source,
-      options,
-      declarations,
-      target: compiler.getEmitScriptTarget(options),
-      references: config.projectReferences ?? []
+    this.options = this.normaliseOptions(config.options);
+    this.references = config.projectReferences ?? [];
+    this.resolved = {
+      target: compiler.getEmitScriptTarget(this.options),
+      declarations: this.options.declaration ? (this.options.declarationDir || this.options.outDir)! : false
     };
 
     // Files
     this.plugin.filter.roots = this.plugin.resolver.toPaths(config.fileNames, this.rootFilter);
-    this.plugin.filter.configs = this.plugin.resolver.toPaths(concat([this.state.path], source.extendedSourceFiles));
+    this.plugin.filter.configs = this.plugin.resolver.toPaths(
+      concat([], this.file.path, this.file.source.extendedSourceFiles)
+    );
+
+    return true;
+  }
+
+  private find(input: string) {
+    let tracker = this.plugin.tracker;
+
+    // Path
+    if (isPath(input)) {
+      let path = !isAbsolute(input) ? resolve(this.plugin.cwd, input) : input;
+      if (fileExists(path)) return path;
+      tracker.recordError({ message: "TSConfig file does not exist.", path: path });
+      return false;
+    }
+
+    // Filename
+    let dir = this.plugin.cwd,
+      parent = dirname(dir);
+
+    while (dir !== parent) {
+      let path = join(dir, input);
+      if (fileExists(path)) return path;
+
+      dir = parent;
+      parent = dirname(dir);
+    }
+
+    tracker.recordError({
+      message: `TSConfig file with name "${input}" does not exist in directory tree.`
+    });
+    return false;
   }
 
   private normaliseOptions(options: CompilerOptions) {
@@ -177,9 +190,10 @@ export class Config {
     delete options.outFile;
 
     // Module
+    let supportedModuleKinds = this.getSupportedModuleKinds();
     if (options.module === undefined) options.module = compiler.ModuleKind.ESNext;
-    else if (!this.state.supportedModuleKinds.includes(options.module)) {
-      let names = this.state.supportedModuleKinds.map(kind => compiler.ModuleKind[kind]).join(", ");
+    else if (!supportedModuleKinds.includes(options.module)) {
+      let names = supportedModuleKinds.map(kind => compiler.ModuleKind[kind]).join(", ");
       this.records.push({
         category: RecordCategory.Error,
         message: `Unsupported module kind: ${compiler.ModuleKind[options.module]}.`,
@@ -257,11 +271,11 @@ export class Config {
   }
 
   private createHost(): ParseConfigHost {
-    let sys = this.plugin.compiler.instance.sys;
+    let compiler = this.plugin.compiler.instance;
     return {
-      fileExists: sys.fileExists,
-      readDirectory: sys.readDirectory,
-      readFile: sys.readFile,
+      fileExists: compiler.sys.fileExists,
+      readDirectory: compiler.sys.readDirectory,
+      readFile: compiler.sys.readFile,
       useCaseSensitiveFileNames: isCaseSensitive
     };
   }

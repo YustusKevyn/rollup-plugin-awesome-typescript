@@ -26,11 +26,11 @@ export class Emitter {
   }
 
   private emitDeclarations(files: Set<string>) {
-    let { declarations, options } = this.plugin.config.store;
+    let declarations = this.plugin.config.resolved.declarations;
     if (!declarations) return;
 
     let compiler = this.plugin.compiler.instance,
-      rootDir = options.rootDir;
+      rootDir = this.plugin.config.options.rootDir;
     if (!rootDir)
       rootDir = compiler.computeCommonSourceDirectoryOfFilenames(Array.from(files), this.plugin.cwd, normaliseCase);
     if (!this.declarations.all) files = intersection(files, this.declarations.pending);
