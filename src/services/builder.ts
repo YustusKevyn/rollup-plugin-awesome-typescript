@@ -4,6 +4,7 @@ import type { PluginContext } from "rollup";
 
 import { endsWith } from "../util/data";
 import { trueCase } from "../util/path";
+import { forbiddenIdentifiers } from "../constants";
 
 export class Builder {
   private builds: Map<string, Build> = new Map();
@@ -43,8 +44,8 @@ export class Builder {
     return this.getBuild(path)?.dependencies ?? null;
   }
 
-  public getJs(path: string) {
-    return this.getBuild(path)?.output.js || null;
+  public getModule(path: string) {
+    return this.getBuild(path)?.output.module || null;
   }
 
   public getDeclaration(path: string) {
@@ -70,14 +71,18 @@ export class Builder {
 
     let program = this.plugin.program.instance,
       build: Build = {
-        output: { js: false, declaration: false },
+        output: { module: false, declaration: false },
         dependencies: new Set()
       };
 
-    // Output
+    // Files
     let files = this.emit(path);
     if (!files) return null;
-    if (files.js) build.output.js = { text: files.js, map: files.jsMap };
+
+    // Output
+    if (files.js) build.output.module = { text: files.js, map: files.jsMap };
+    else if (files.json) build.output.module = { text: this.jsonToModule(files.json) };
+
     if (files.declaration) {
       this.plugin.emitter.declarations.pending.add(path);
       build.output.declaration = { text: files.declaration, map: files.declarationMap };
@@ -116,9 +121,26 @@ export class Builder {
         else if (endsWith(emitPath, ".js.map")) files.jsMap = emitText;
         else if (endsWith(emitPath, ".d.ts")) files.declaration = emitText;
         else if (endsWith(emitPath, ".d.ts.map")) files.declarationMap = emitText;
+        else if (endsWith(emitPath, ".json")) files.json = emitText;
       };
 
     this.plugin.program.instance.emit(source, writeFile, undefined, declarationOnly);
     return files;
+  }
+
+  private jsonToModule(json: string) {
+    let data = JSON.parse(json),
+      final = "const data = " + json.slice(0, -1) + ";\n\n";
+
+    if (typeof data === "object" && !Array.isArray(data) && data !== null) {
+      for (let key in data) {
+        if (!this.plugin.compiler.instance.isIdentifierText(key, this.plugin.config.resolved.target)) continue;
+        if (forbiddenIdentifiers.has(key)) continue;
+        final += "export const " + key + " = data." + key + ";\n";
+      }
+    }
+
+    final += "export default data;\n";
+    return final;
   }
 }

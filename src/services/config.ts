@@ -2,6 +2,7 @@ import type { Plugin } from "../plugin";
 import type { Record } from "../types";
 import type {
   CompilerOptions,
+  ConfigFileSpecs,
   ModuleKind,
   ParseConfigHost,
   ProjectReference,
@@ -11,9 +12,9 @@ import type {
 
 import { dirname, isAbsolute, join, resolve } from "path";
 import { RecordCategory } from "../constants";
-import { concat } from "../util/data";
 import { isPath, isSubPath } from "../util/path";
 import { fileExists, isCaseSensitive } from "../util/fs";
+import { concat } from "../util/data";
 
 export class Config {
   private loaded: boolean = false;
@@ -21,9 +22,9 @@ export class Config {
 
   private host!: ParseConfigHost;
   private file!: {
+    path: string | undefined;
     base: string;
-    path?: string;
-    source: TsConfigSourceFile;
+    specs: ConfigFileSpecs;
   };
 
   public options!: CompilerOptions;
@@ -37,9 +38,14 @@ export class Config {
 
   public init() {
     if (!this.loaded && !this.load()) return false;
-    this.loaded = true;
+    let message = [];
 
-    if (this.file.path) this.plugin.logger.log(` • Using TSConfig at ${this.plugin.logger.formatPath(this.file.path)}`);
+    // Title
+    if (this.file.path) message.push(` • Using TSConfig at ${this.plugin.logger.formatPath(this.file.path)}`);
+    else message.push(" • Using TSConfig specified in the plugin options");
+
+    // Finalise
+    this.plugin.logger.log(message);
     return true;
   }
 
@@ -74,13 +80,7 @@ export class Config {
   public updateFiles() {
     let compiler = this.plugin.compiler.instance;
     this.plugin.filter.roots = this.plugin.resolver.toPaths(
-      compiler.getFileNamesFromConfigSpecs(
-        this.file.source.configFileSpecs!,
-        this.file.base,
-        this.options,
-        this.host,
-        []
-      ),
+      compiler.getFileNamesFromConfigSpecs(this.file.specs, this.file.base, this.options, this.host, []),
       this.rootFilter
     );
     this.plugin.program.update();
@@ -96,38 +96,33 @@ export class Config {
     this.records = [];
 
     let input = this.plugin.options.config ?? "tsconfig.json",
-      compiler = this.plugin.compiler.instance;
+      compiler = this.plugin.compiler.instance,
+      source: TsConfigSourceFile,
+      path,
+      base;
 
+    // File
     if (typeof input === "string") {
-      let path = this.find(input);
-      if (!path) return;
+      let found = this.find(input);
+      if (!found) return false;
 
-      this.file = {
-        path,
-        base: this.plugin.context ?? dirname(path),
-        source: compiler.readJsonConfigFile(path, compiler.sys.readFile)
-      };
-    } else {
-      let json = "{}";
-      if (typeof input === "object") {
-        // ******** W I P ! ******** //
-        // CONVERT ENUMS
-        // TRY CATCH
-        // REMOVE LOCATION IN ERRORS
-        // ADD INIT LOG INFO
-        json = JSON.stringify(input);
-      }
+      path = this.plugin.resolver.toPath(found);
+      base = this.plugin.context ?? dirname(path);
+      source = compiler.readJsonConfigFile(path, compiler.sys.readFile);
+    }
 
-      this.file = {
-        base: this.plugin.context ?? this.plugin.cwd,
-        source: compiler.parseJsonText("tsconfig.json", json)
-      };
+    // Custom
+    else {
+      let json = typeof input === "object" ? JSON.stringify(input) : "";
+      base = this.plugin.context ?? this.plugin.cwd;
+      source = compiler.parseJsonText("tsconfig.json", json);
     }
 
     // Config
-    let config = compiler.parseJsonSourceFileConfigFileContent(this.file.source, this.host, this.file.base);
+    let config = compiler.parseJsonSourceFileConfigFileContent(source, this.host, base);
     for (let error of config.errors) this.records.push(this.plugin.diagnostics.toRecord(error));
 
+    this.file = { path, base, specs: source.configFileSpecs! };
     this.options = this.normaliseOptions(config.options);
     this.references = config.projectReferences ?? [];
     this.resolved = {
@@ -137,10 +132,10 @@ export class Config {
 
     // Files
     this.plugin.filter.roots = this.plugin.resolver.toPaths(config.fileNames, this.rootFilter);
-    this.plugin.filter.configs = this.plugin.resolver.toPaths(
-      concat([], this.file.path, this.file.source.extendedSourceFiles)
-    );
+    this.plugin.filter.configs = this.plugin.resolver.toPaths(concat([], this.file.path, source.extendedSourceFiles));
 
+    // Finalise
+    this.loaded = true;
     return true;
   }
 
@@ -151,7 +146,7 @@ export class Config {
     if (isPath(input)) {
       let path = !isAbsolute(input) ? resolve(this.plugin.cwd, input) : input;
       if (fileExists(path)) return path;
-      tracker.recordError({ message: "TSConfig file does not exist.", path: path });
+      tracker.recordError({ message: "TSConfig file does not exist.", path });
       return false;
     }
 

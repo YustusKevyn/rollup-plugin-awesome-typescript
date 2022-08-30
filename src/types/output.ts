@@ -4,16 +4,16 @@ export interface Build {
 }
 
 export interface Output {
-  js: JsOutput | false;
+  module: ModuleBuild | false;
   declaration: DeclarationOutput | false | null;
 }
 
-export interface JsOutput {
+export interface ModuleBuild {
   text: string;
-  map: string | undefined;
+  map?: string | undefined;
 }
 
 export interface DeclarationOutput {
   text: string;
-  map: string | undefined;
+  map?: string | undefined;
 }

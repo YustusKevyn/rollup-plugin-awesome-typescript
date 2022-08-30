@@ -18,19 +18,20 @@ export class Helpers {
 
   public init() {
     if (!this.loaded && !this.load()) return false;
-    this.loaded = true;
+    let message = [];
 
-    let header = [],
-      title = " • Using helper library ";
+    // Title
+    let title = " • Using helper library ";
     if (!this.package) title += "at " + this.plugin.logger.formatPath(this.path);
     else title += apply(this.package.name, Color.Yellow) + " v" + this.package.version;
-    header.push(title);
+    message.push(title);
 
     // Supported
     if (this.package?.name !== "tslib")
-      header.push(apply("   This helper library may not be compatible with Awesome TypeScript", Color.Grey));
+      message.push(apply("   This helper library may not be compatible with Awesome TypeScript", Color.Grey));
 
-    this.plugin.logger.log(header);
+    // Finalise
+    this.plugin.logger.log(message);
     return true;
   }
 
@@ -62,6 +63,8 @@ export class Helpers {
       return false;
     }
 
+    // Finalise
+    this.loaded = true;
     return true;
   }
 }

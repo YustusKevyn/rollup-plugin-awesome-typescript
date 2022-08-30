@@ -20,19 +20,20 @@ export class Compiler {
 
   public init() {
     if (!this.loaded && !this.load()) return false;
-    this.loaded = true;
+    let message = [];
 
-    let header = [],
-      title = " • Using compiler ";
+    // Title
+    let title = " • Using compiler ";
     if (!this.package) title += "at " + this.plugin.logger.formatPath(this.path);
     else title += apply(this.package.name, Color.Yellow) + " v" + this.package.version;
-    header.push(title);
+    message.push(title);
 
     // Supported
     if (this.package?.name !== "typescript")
-      header.push(apply("   This compiler may not be compatible with Awesome TypeScript", Color.Grey));
+      message.push(apply("   This compiler may not be compatible with Awesome TypeScript", Color.Grey));
 
-    this.plugin.logger.log(header);
+    // Finalise
+    this.plugin.logger.log(message);
     return true;
   }
 
@@ -73,6 +74,8 @@ export class Compiler {
       return false;
     }
 
+    // Finalise
+    this.loaded = true;
     return true;
   }
 }

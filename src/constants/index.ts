@@ -1,3 +1,5 @@
+export * from "./language";
+
 export const EmptyLine = Symbol();
 
 export enum PluginMode {

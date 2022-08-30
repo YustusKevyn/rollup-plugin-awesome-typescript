@@ -92,8 +92,8 @@ export class Plugin {
     if (!this.filter.isModule(path)) return null;
 
     // Output
-    let output = this.builder.getJs(path);
-    if (!output?.text) return null;
+    let output = this.builder.getModule(path);
+    if (!output) return null;
 
     // Result
     let result: LoadResult = { code: output.text };
