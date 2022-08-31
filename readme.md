@@ -80,14 +80,33 @@ TSConfig are resolved with respect to this path.
 
 #### _`config`_
 
-Type: `string`  
+Type: `string` | `false`  
 Default: `"tsconfig.json"`
 
-Specifies the location of the TSConfig. Can be one of the following:
+Specifies which TSConfig should be used. Can be one of the following:
 
 - A relative or absolute path
 - A filename to search for in the directory tree, starting from the current
   working directory
+- `false` to disable the usage of a TSConfig
+
+### _`compilerOptions`_
+
+Type: `CompilerOptions`
+
+Overrides the TSConfig compiler options.
+
+### _`logLevel`_
+
+Type: `LogLevel`  
+Default: `LogLevel.Info`
+
+Specifies the log level to which the log output should be restricted. Can
+be one of the following:
+
+- `LogLevel.Error`
+- `LogLevel.Warn`
+- `LogLevel.Info`
 
 #### _`compiler`_
 

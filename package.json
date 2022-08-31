@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "build": "tsc --outDir build --module nodeNext --incremental --declaration",
-    "prepare": "npm run build && rollup -c rollup.config.js && cp src/types.d.ts lib/index.d.ts"
+    "prepare": "npm run build && rollup -c rollup.config.js"
   },
   "dependencies": {
     "true-case-path": "^2.2.1"

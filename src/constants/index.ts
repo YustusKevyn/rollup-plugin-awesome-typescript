@@ -9,10 +9,9 @@ export enum PluginMode {
 }
 
 export enum LogLevel {
-  Error,
-  Warning,
-  Info,
-  Debug
+  Error = 0,
+  Warn = 1,
+  Info = 2
 }
 
 export enum FileKind {

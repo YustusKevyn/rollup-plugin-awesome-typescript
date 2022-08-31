@@ -2,7 +2,7 @@ import type { Plugin } from "../plugin";
 
 import { lt } from "semver";
 import { join, resolve } from "path";
-import { apply, Color } from "../util/ansi";
+import { apply, Color, Mode } from "../util/ansi";
 import { isDistinct, isRelative, normalise } from "../util/path";
 
 export class Helpers {
@@ -28,7 +28,7 @@ export class Helpers {
 
     // Supported
     if (this.package?.name !== "tslib")
-      message.push(apply("   This helper library may not be compatible with Awesome TypeScript", Color.Grey));
+      message.push(apply("   This helper library may not be compatible with Awesome TypeScript", Mode.Dim));
 
     // Finalise
     this.plugin.logger.log(message);

@@ -11,7 +11,8 @@ export class Resolver {
   constructor(private plugin: Plugin) {}
 
   public init() {
-    (this.host = this.createHost()), (this.cache = this.createCache());
+    this.createHost();
+    this.createCache();
   }
 
   public update() {
@@ -48,9 +49,9 @@ export class Resolver {
     return result ? this.toPath(result.resolvedFileName) : null;
   }
 
-  private createHost(): ModuleResolutionHost {
+  private createHost() {
     let sys = this.plugin.compiler.instance.sys;
-    return {
+    this.host = {
       fileExists: sys.fileExists,
       getCurrentDirectory: () => this.plugin.cwd,
       readFile: sys.readFile,
@@ -62,7 +63,7 @@ export class Resolver {
   }
 
   private createCache() {
-    return this.plugin.compiler.instance.createModuleResolutionCache(
+    this.cache = this.plugin.compiler.instance.createModuleResolutionCache(
       this.plugin.cwd,
       normaliseCase,
       this.plugin.config.options

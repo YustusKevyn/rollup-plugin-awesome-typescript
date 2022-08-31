@@ -17,7 +17,7 @@ export class Program {
   constructor(private plugin: Plugin) {}
 
   public init() {
-    this.host = this.createHost();
+    this.createHost();
     this.update();
   }
 
@@ -124,9 +124,9 @@ export class Program {
     this.plugin.filter.declarations.delete(path);
   }
 
-  private createHost(): CompilerHost {
+  private createHost() {
     let compiler = this.plugin.compiler.instance;
-    return {
+    this.host = {
       fileExists: compiler.sys.fileExists,
       getCanonicalFileName: normaliseCase,
       getCurrentDirectory: () => this.plugin.cwd,

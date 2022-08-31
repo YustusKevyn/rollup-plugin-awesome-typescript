@@ -1,6 +1,17 @@
 import type { LogLevel } from "../constants";
+import type { CompilerOptions } from "typescript";
 
 export interface Options {
+  /**
+   * Specifies the log level to which the log output should be restricted. Can
+   * be one of the following:
+   *
+   * - `LogLevel.Error` or `0`
+   * - `LogLevel.Warn` or `1`
+   * - `LogLevel.Info` or `2`
+   *
+   * Default is `LogLevel.Info`
+   */
   logLevel?: LogLevel | undefined;
 
   /**
@@ -18,7 +29,22 @@ export interface Options {
    */
   context?: string | undefined;
 
+  /**
+   * Specifies which TSConfig should be used. Can be one of the following:
+   *
+   * - A relative or absolute path
+   * - A filename to search for in the directory tree, starting from the
+   *   current working directory
+   * - `false` to disable the usage of a TSConfig
+   *
+   * Default is `"tsconfig.json"`
+   */
   config?: string | object | false | undefined;
+
+  /**
+   * Overrides the TSConfig compiler options.
+   */
+  compilerOptions?: CompilerOptions | undefined;
 
   /**
    * Specifies the TypeScript helper library to use. Can be one of the

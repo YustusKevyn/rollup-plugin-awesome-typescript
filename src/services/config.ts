@@ -12,23 +12,27 @@ import type {
 
 import { dirname, isAbsolute, join, resolve } from "path";
 import { RecordCategory } from "../constants";
+import { concat } from "../util/data";
+import { apply, Mode } from "../util/ansi";
 import { isPath, isSubPath } from "../util/path";
 import { fileExists, isCaseSensitive } from "../util/fs";
-import { concat } from "../util/data";
 
 export class Config {
   private loaded: boolean = false;
   private records: Record[] = [];
 
   private host!: ParseConfigHost;
-  private file!: {
-    path: string | undefined;
+  private input!: {
+    path?: string;
     base: string;
-    specs: ConfigFileSpecs;
   };
 
   public options!: CompilerOptions;
   public references!: Readonly<ProjectReference[]>;
+  private source!: {
+    specs: ConfigFileSpecs;
+    extends: string[];
+  };
   public resolved!: {
     target: ScriptTarget;
     declarations: string | false;
@@ -36,13 +40,31 @@ export class Config {
 
   constructor(private plugin: Plugin) {}
 
+  private filter = (path: string) => {
+    if (this.resolved.declarations && isSubPath(path, this.resolved.declarations)) return false;
+    return true;
+  };
+
   public init() {
+    if (!this.host) this.createHost();
+    if (!this.input && !this.createInput()) return false;
     if (!this.loaded && !this.load()) return false;
+
     let message = [];
 
     // Title
-    if (this.file.path) message.push(` • Using TSConfig at ${this.plugin.logger.formatPath(this.file.path)}`);
-    else message.push(" • Using TSConfig specified in the plugin options");
+    if (this.input.path) message.push(` • Using TSConfig at ${this.plugin.logger.formatPath(this.input.path)}`);
+    else message.push(" • Using custom TSConfig");
+
+    // Extends
+    if (this.source.extends) {
+      let extended = "   extends ";
+      for (let i = 0; i < this.source.extends.length; i++) {
+        extended += this.plugin.logger.formatPath(this.source.extends[i]);
+        if (i < this.source.extends.length - 1) extended += ", ";
+      }
+      message.push(apply(extended, Mode.Dim));
+    }
 
     // Finalise
     this.plugin.logger.log(message);
@@ -58,16 +80,16 @@ export class Config {
       oldOptions = this.options;
 
     // File
-    if (this.file.path && !fileExists(this.file.path)) {
+    if (this.input.path && !fileExists(this.input.path)) {
       this.records.push({
         category: RecordCategory.Error,
         message: "TSConfig file does not exist anymore.",
-        path: this.file.path
+        path: this.input.path
       });
       return;
     }
 
-    // Reload
+    // Load
     this.load();
     if (compiler.changesAffectModuleResolution(oldOptions, this.options)) this.plugin.resolver.update();
     if (compiler.compilerOptionsAffectEmit(this.options, oldOptions)) {
@@ -80,50 +102,34 @@ export class Config {
   public updateFiles() {
     let compiler = this.plugin.compiler.instance;
     this.plugin.filter.roots = this.plugin.resolver.toPaths(
-      compiler.getFileNamesFromConfigSpecs(this.file.specs, this.file.base, this.options, this.host, []),
-      this.rootFilter
+      compiler.getFileNamesFromConfigSpecs(this.source.specs, this.input.base, this.options, this.host, []),
+      this.filter
     );
     this.plugin.program.update();
   }
 
-  private rootFilter = (path: string) => {
-    if (this.resolved.declarations && isSubPath(path, this.resolved.declarations)) return false;
-    return true;
-  };
-
   private load() {
-    if (!this.host) this.host = this.createHost();
     this.records = [];
 
-    let input = this.plugin.options.config ?? "tsconfig.json",
-      compiler = this.plugin.compiler.instance,
-      source: TsConfigSourceFile,
-      path,
-      base;
+    let compiler = this.plugin.compiler.instance,
+      source: TsConfigSourceFile;
 
-    // File
-    if (typeof input === "string") {
-      let found = this.find(input);
-      if (!found) return false;
-
-      path = this.plugin.resolver.toPath(found);
-      base = this.plugin.context ?? dirname(path);
-      source = compiler.readJsonConfigFile(path, compiler.sys.readFile);
-    }
-
-    // Custom
-    else {
-      let json = typeof input === "object" ? JSON.stringify(input) : "";
-      base = this.plugin.context ?? this.plugin.cwd;
-      source = compiler.parseJsonText("tsconfig.json", json);
-    }
+    // Source
+    if (this.input.path) source = compiler.readJsonConfigFile(this.input.path, compiler.sys.readFile);
+    else source = compiler.parseJsonText("tsconfig.json", "");
 
     // Config
-    let config = compiler.parseJsonSourceFileConfigFileContent(source, this.host, base);
+    let config = compiler.parseJsonSourceFileConfigFileContent(
+      source,
+      this.host,
+      this.input.base,
+      this.getCompilerOptions()
+    );
     for (let error of config.errors) this.records.push(this.plugin.diagnostics.toRecord(error));
 
-    this.file = { path, base, specs: source.configFileSpecs! };
-    this.options = this.normaliseOptions(config.options);
+    // Save
+    this.source = { specs: source.configFileSpecs!, extends: source.extendedSourceFiles! };
+    this.options = this.normaliseCompilerOptions(config.options);
     this.references = config.projectReferences ?? [];
     this.resolved = {
       target: compiler.getEmitScriptTarget(this.options),
@@ -131,48 +137,29 @@ export class Config {
     };
 
     // Files
-    this.plugin.filter.roots = this.plugin.resolver.toPaths(config.fileNames, this.rootFilter);
-    this.plugin.filter.configs = this.plugin.resolver.toPaths(concat([], this.file.path, source.extendedSourceFiles));
+    this.plugin.filter.roots = this.plugin.resolver.toPaths(config.fileNames, this.filter);
+    this.plugin.filter.configs = this.plugin.resolver.toPaths(concat([], this.input.path, source.extendedSourceFiles));
 
     // Finalise
     this.loaded = true;
     return true;
   }
 
-  private find(input: string) {
-    let tracker = this.plugin.tracker;
+  private getCompilerOptions() {
+    let compiler = this.plugin.compiler.instance,
+      json = this.plugin.options.compilerOptions ?? {};
 
-    // Path
-    if (isPath(input)) {
-      let path = !isAbsolute(input) ? resolve(this.plugin.cwd, input) : input;
-      if (fileExists(path)) return path;
-      tracker.recordError({ message: "TSConfig file does not exist.", path });
-      return false;
+    // Enums
+    for (let option of compiler.optionDeclarations) {
+      if (typeof json[option.name] !== "number" || !(option.type instanceof Map)) continue;
+      for (let [str, num] of option.type.entries()) if (json[option.name] === num) json[option.name] = str;
     }
 
-    // Filename
-    let dir = this.plugin.cwd,
-      parent = dirname(dir);
+    // Convert
+    let { errors, options } = compiler.convertCompilerOptionsFromJson(json, this.input.base);
+    for (let error of errors) this.records.push(this.plugin.diagnostics.toRecord(error));
 
-    while (dir !== parent) {
-      let path = join(dir, input);
-      if (fileExists(path)) return path;
-
-      dir = parent;
-      parent = dirname(dir);
-    }
-
-    tracker.recordError({
-      message: `TSConfig file with name "${input}" does not exist in directory tree.`
-    });
-    return false;
-  }
-
-  private normaliseOptions(options: CompilerOptions) {
-    let { buildInfo, declarations } = this.plugin.options,
-      compiler = this.plugin.compiler.instance;
-
-    // Force
+    // Override
     options.noEmit = false;
     options.noEmitHelpers = false;
     options.noResolve = false;
@@ -180,6 +167,24 @@ export class Config {
     options.importHelpers = true;
     options.inlineSourceMap = false;
     options.suppressOutputPathCheck = true;
+
+    return options;
+  }
+
+  private getSupportedModuleKinds() {
+    let ModuleKind = this.plugin.compiler.instance.ModuleKind,
+      final: ModuleKind[] = [];
+    for (let key in ModuleKind) {
+      let value = ModuleKind[key];
+      if (typeof value !== "number") continue;
+      if (value >= ModuleKind.ES2015 && value <= ModuleKind.ESNext) final.push(value);
+    }
+    return final;
+  }
+
+  private normaliseCompilerOptions(options: CompilerOptions) {
+    let { buildInfo, declarations } = this.plugin.options,
+      compiler = this.plugin.compiler.instance;
 
     delete options.out;
     delete options.outFile;
@@ -265,24 +270,56 @@ export class Config {
     return options;
   }
 
-  private createHost(): ParseConfigHost {
+  private createInput() {
+    let input = this.plugin.options.config ?? "tsconfig.json",
+      tracker = this.plugin.tracker;
+
+    // Custom
+    if (typeof input !== "string") {
+      this.input = { base: this.plugin.context ?? this.plugin.cwd };
+      return true;
+    }
+
+    // Path
+    if (isPath(input)) {
+      let path = !isAbsolute(input) ? resolve(this.plugin.cwd, input) : input;
+      if (fileExists(path)) {
+        this.input = { path, base: this.plugin.context ?? dirname(path) };
+        return true;
+      }
+
+      tracker.recordError({ message: "TSConfig file does not exist.", path });
+      return false;
+    }
+
+    // Filename
+    let dir = this.plugin.cwd,
+      parent = dirname(dir);
+
+    while (dir !== parent) {
+      let path = join(dir, input);
+      if (fileExists(path)) {
+        this.input = { path, base: this.plugin.context ?? dirname(path) };
+        return true;
+      }
+
+      dir = parent;
+      parent = dirname(dir);
+    }
+
+    tracker.recordError({
+      message: `TSConfig file with name "${input}" does not exist in directory tree.`
+    });
+    return false;
+  }
+
+  private createHost() {
     let compiler = this.plugin.compiler.instance;
-    return {
+    this.host = {
       fileExists: compiler.sys.fileExists,
       readDirectory: compiler.sys.readDirectory,
       readFile: compiler.sys.readFile,
       useCaseSensitiveFileNames: isCaseSensitive
     };
-  }
-
-  private getSupportedModuleKinds() {
-    let ModuleKind = this.plugin.compiler.instance.ModuleKind,
-      final: ModuleKind[] = [];
-    for (let key in ModuleKind) {
-      let value = ModuleKind[key];
-      if (typeof value !== "number") continue;
-      if (value >= ModuleKind.ES2015 && value <= ModuleKind.ESNext) final.push(value);
-    }
-    return final;
   }
 }

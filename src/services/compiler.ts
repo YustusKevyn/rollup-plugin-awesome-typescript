@@ -3,7 +3,7 @@ import type typescript from "typescript";
 
 import { lt } from "semver";
 import { join, resolve } from "path";
-import { apply, Color } from "../util/ansi";
+import { apply, Color, Mode } from "../util/ansi";
 import { isDistinct, isRelative, normalise } from "../util/path";
 
 export class Compiler {
@@ -30,7 +30,7 @@ export class Compiler {
 
     // Supported
     if (this.package?.name !== "typescript")
-      message.push(apply("   This compiler may not be compatible with Awesome TypeScript", Color.Grey));
+      message.push(apply("   This compiler may not be compatible with Awesome TypeScript", Mode.Dim));
 
     // Finalise
     this.plugin.logger.log(message);

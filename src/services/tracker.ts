@@ -44,7 +44,7 @@ export class Tracker {
         record.category === RecordCategory.Error
           ? LogLevel.Error
           : record.category === RecordCategory.Warning
-          ? LogLevel.Warning
+          ? LogLevel.Warn
           : LogLevel.Info
       );
     }

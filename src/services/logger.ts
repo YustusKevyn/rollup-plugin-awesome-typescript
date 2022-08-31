@@ -13,14 +13,8 @@ export class Logger {
 
   public log(message: Message, level: LogLevel = LogLevel.Info) {
     if (level > this.level) return;
-    let final = "";
-    if (!Array.isArray(message)) message = [message];
-    for (let i = 0; i < message.length; i++) {
-      let line = message[i];
-      if (typeof line === "string") final += line;
-      if (i !== message.length - 1) final += "\n";
-    }
-    console.log(final);
+    let final = this.formatMessage(message);
+    if (final.length) console.log(final.join("\n"));
   }
 
   public formatRecord(record: Record) {
@@ -30,7 +24,7 @@ export class Logger {
       color = Color.Red;
       background = Background.Red;
     } else if (record.category === RecordCategory.Warning) {
-      label = "WARNING";
+      label = "WARN";
       color = Color.Yellow;
       background = Background.Yellow;
     } else if (record.category === RecordCategory.Hint) {
@@ -98,14 +92,11 @@ export class Logger {
 
     let final = [];
     for (let line of message) {
-      if (line === EmptyLine) {
-        final.push("");
-        continue;
-      }
-
-      if (indentation) line = indentation + line;
-      if (styles.length) line = apply(line, ...styles);
-      final.push(line);
+      if (typeof line === "string") {
+        if (indentation) line = indentation + line;
+        if (styles.length) line = apply(line, ...styles);
+        final.push(line);
+      } else if (line === EmptyLine) final.push("");
     }
     return final;
   }
