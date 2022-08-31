@@ -1,11 +1,12 @@
-import { awesomeTypescript } from "./build/index";
+import { awesomeTypescript } from "rollup-plugin-awesome-typescript";
 
 export default {
   input: "src/index.ts",
   output: [
     {
       file: "lib/index.js",
-      format: "cjs"
+      format: "cjs",
+      exports: "named"
     },
     {
       file: "lib/index.mjs",

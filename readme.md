@@ -90,13 +90,13 @@ Specifies which TSConfig should be used. Can be one of the following:
   working directory
 - `false` to disable the usage of a TSConfig
 
-### _`compilerOptions`_
+#### _`compilerOptions`_
 
 Type: `CompilerOptions`
 
 Overrides the TSConfig compiler options.
 
-### _`logLevel`_
+#### _`logLevel`_
 
 Type: `LogLevel`  
 Default: `LogLevel.Info`
