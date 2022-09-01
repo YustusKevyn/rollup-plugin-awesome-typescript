@@ -54,7 +54,7 @@ export class Plugin {
     if (context.meta.watchMode) this.mode = PluginMode.Watch;
 
     this.tracker.reset();
-    this.logger.log([EmptyLine, apply("Awesome TypeScript", Mode.Underline)]);
+    this.logger.log([EmptyLine, apply("Awesome TypeScript v" + VERSION, Mode.Underline)]);
 
     let core = this.compiler.init() && this.helpers.init() && this.config.init();
     if (!core) {

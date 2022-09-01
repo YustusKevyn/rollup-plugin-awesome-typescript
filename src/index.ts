@@ -9,4 +9,3 @@ function awesomeTypescript(options: Options = {}) {
 }
 
 export { awesomeTypescript, LogLevel, Options };
-export default awesomeTypescript;
