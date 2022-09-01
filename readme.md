@@ -56,21 +56,21 @@ export default {
 
 ## Plugin Options
 
-#### _`check`_
+#### `check`
 
 Type: `boolean`  
 Default: `true`
 
 Specifies whether to enable type checking.
 
-#### _`cwd`_
+#### `cwd`
 
 Type: `string`  
 Default: `process.cwd()`
 
 Specifies the current working directory.
 
-#### _`context`_
+#### `context`
 
 Type: `string`  
 Default: The directory containing the TSConfig
@@ -78,7 +78,7 @@ Default: The directory containing the TSConfig
 Specifies the base path used to parse the TSConfig. Relative paths within the
 TSConfig are resolved with respect to this path.
 
-#### _`config`_
+#### `config`
 
 Type: `string` | `false`  
 Default: `"tsconfig.json"`
@@ -90,13 +90,13 @@ Specifies which TSConfig should be used. Can be one of the following:
   working directory
 - `false` to disable the usage of a TSConfig
 
-#### _`compilerOptions`_
+#### `compilerOptions`
 
 Type: `CompilerOptions`
 
 Overrides the TSConfig compiler options.
 
-#### _`logLevel`_
+#### `logLevel`
 
 Type: `LogLevel`  
 Default: `LogLevel.Info`
@@ -108,7 +108,7 @@ be one of the following:
 - `LogLevel.Warn`
 - `LogLevel.Info`
 
-#### _`compiler`_
+#### `compiler`
 
 Type: `string`  
 Default: `"typescript"`
@@ -118,7 +118,7 @@ Specifies the TypeScript compiler to use. Can be one of the following:
 - A relative or absolute path pointing to a package or an entry file
 - The name of a local dependency
 
-#### _`helpers`_
+#### `helpers`
 
 Type: `string`  
 Default: `"tslib"`
@@ -129,7 +129,7 @@ following:
 - A relative or absolute path pointing to a package or an entry file
 - The name of a local dependency
 
-#### _`declarations`_
+#### `declarations`
 
 Type: `string` | `boolean`  
 Default: TSConfig options
@@ -145,7 +145,7 @@ incremental compilation information. Can be one of the following:
 
 If undefined, the corresponding options in the TSConfig are used as is.
 
-#### _`buildInfo`_
+#### `buildInfo`
 
 Type: `string` | `boolean`  
 Default: TSConfig options
