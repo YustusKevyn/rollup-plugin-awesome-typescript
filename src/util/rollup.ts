@@ -18,14 +18,14 @@ Function.prototype.bind = function (...args) {
 export function toRollupPlugin(plugin: Plugin): RollupPlugin {
   return {
     name: "Awesome Typescript",
-    watchChange(id, change) {
-      return plugin.watcher.register(id, change.event);
-    },
     options() {
-      return plugin.init(this);
+      plugin.init(this);
+    },
+    watchChange(id, change) {
+      plugin.watcher.register(id, change.event);
     },
     buildStart() {
-      return plugin.start(this);
+      plugin.start(this);
     },
     resolveId(id, origin) {
       return plugin.resolve(id, origin);
@@ -49,7 +49,7 @@ export function toRollupPlugin(plugin: Plugin): RollupPlugin {
 
       // @ts-ignore
       let graph = this.parse.__this;
-      return plugin.end({
+      plugin.end({
         ...this,
         addWatchFile: id => (graph.watchFiles[id] = true)
       });

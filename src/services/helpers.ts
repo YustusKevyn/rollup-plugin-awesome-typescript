@@ -1,66 +1,70 @@
 import type { Plugin } from "../plugin";
+import type { Message } from "../types";
 
 import { lt } from "semver";
-import { join, resolve } from "path";
-import { apply, Color, Mode } from "../util/ansi";
+import { dirname, join, resolve } from "path";
+import { fileExists } from "../util/fs";
+import { apply, Color } from "../util/ansi";
 import { isDistinct, isRelative, normalise } from "../util/path";
 
 export class Helpers {
-  private loaded: boolean = false;
-
   public path!: string;
-  private package?: {
-    name: string;
-    version: string;
-  };
+
+  private loaded: boolean = false;
+  private message!: Message;
 
   constructor(private plugin: Plugin) {}
 
   public init() {
     if (!this.loaded && !this.load()) return false;
-    let message = [];
-
-    // Title
-    let title = " • Using helper library ";
-    if (!this.package) title += "at " + this.plugin.logger.formatPath(this.path);
-    else title += apply(this.package.name, Color.Yellow) + " v" + this.package.version;
-    message.push(title);
-
-    // Supported
-    if (this.package?.name !== "tslib")
-      message.push(apply("   This helper library may not be compatible with Awesome TypeScript", Mode.Dim));
-
-    // Finalise
-    this.plugin.logger.log(message);
+    this.plugin.logger.log(this.message);
     return true;
   }
 
   private load() {
-    let input = this.plugin.options.helpers ?? "tslib",
+    if (this.loaded) return true;
+    let input = this.plugin.options.helpers,
       tracker = this.plugin.tracker;
-    if (isRelative(input)) input = resolve(this.plugin.cwd, input);
 
-    // Path
-    try {
-      this.path = normalise(require.resolve(input));
-    } catch {
-      if (isDistinct(input))
+    // Custom
+    if (input) {
+      if (typeof input !== "string" || !isDistinct(input)) {
+        tracker.recordError({ message: "Custom helper library must be passed as a path." });
+        return false;
+      }
+
+      if (isRelative(input)) input = resolve(this.plugin.cwd, input);
+      if (!fileExists(input)) {
         tracker.recordError({ message: "Could not find the specified helper library.", path: input });
-      else tracker.recordError({ message: `Could not find the specified helper library "${input}".` });
-      return false;
+        return false;
+      }
+
+      this.path = normalise(input);
+      this.message = " • Using custom helper library";
     }
 
-    // Package
-    try {
-      this.package = require(join(input, "package.json"));
-    } catch {}
+    // Default
+    else {
+      let path, config;
+      try {
+        let dir = dirname(require.resolve("tslib"));
+        config = require("tslib/package.json");
+        path = join(dir, config.module);
+      } catch {
+        tracker.recordError({ message: "Could not load tslib. Try installing it with `npm i -D tslib`" });
+        return false;
+      }
 
-    if (this.package?.name === "tslib" && lt(this.package.version, "2.4.0")) {
-      tracker.recordError({
-        message:
-          "This version of tslib is not compatible with Awesome TypeScript. Please upgrade to the latest release."
-      });
-      return false;
+      if (lt(config.version, "2.4.0")) {
+        tracker.recordError({
+          message:
+            "This version of tslib is not compatible with Awesome TypeScript. Please upgrade to the latest release."
+        });
+        return false;
+      }
+
+      this.path = path;
+      this.message = ` • Using ${apply("tslib", Color.Yellow)} v${config.version}`;
     }
 
     // Finalise

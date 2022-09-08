@@ -1,5 +1,5 @@
 import type { Plugin } from "../plugin";
-import type { Record } from "../types";
+import type { Message, Record } from "../types";
 import type {
   CompilerOptions,
   ConfigFileSpecs,
@@ -18,24 +18,24 @@ import { isPath, isSubPath } from "../util/path";
 import { fileExists, isCaseSensitive } from "../util/fs";
 
 export class Config {
+  public options!: CompilerOptions;
+  public references!: Readonly<ProjectReference[]>;
+  public resolved!: {
+    target: ScriptTarget;
+    declarations: string | false;
+  };
+
   private loaded: boolean = false;
   private records: Record[] = [];
+  private message!: Message;
 
   private host!: ParseConfigHost;
   private input!: {
     path?: string;
     base: string;
   };
-
-  public options!: CompilerOptions;
-  public references!: Readonly<ProjectReference[]>;
   private source!: {
     specs: ConfigFileSpecs;
-    extends: string[];
-  };
-  public resolved!: {
-    target: ScriptTarget;
-    declarations: string | false;
   };
 
   constructor(private plugin: Plugin) {}
@@ -49,25 +49,7 @@ export class Config {
     if (!this.host) this.createHost();
     if (!this.input && !this.createInput()) return false;
     if (!this.loaded && !this.load()) return false;
-
-    let message = [];
-
-    // Title
-    if (this.input.path) message.push(` • Using TSConfig at ${this.plugin.logger.formatPath(this.input.path)}`);
-    else message.push(" • Using custom TSConfig");
-
-    // Extends
-    if (this.source.extends) {
-      let extended = "   extends ";
-      for (let i = 0; i < this.source.extends.length; i++) {
-        extended += this.plugin.logger.formatPath(this.source.extends[i]);
-        if (i < this.source.extends.length - 1) extended += ", ";
-      }
-      message.push(apply(extended, Mode.Dim));
-    }
-
-    // Finalise
-    this.plugin.logger.log(message);
+    this.plugin.logger.log(this.message);
     return true;
   }
 
@@ -128,7 +110,7 @@ export class Config {
     for (let error of config.errors) this.records.push(this.plugin.diagnostics.toRecord(error));
 
     // Save
-    this.source = { specs: source.configFileSpecs!, extends: source.extendedSourceFiles! };
+    this.source = { specs: source.configFileSpecs! };
     this.options = this.normaliseCompilerOptions(config.options);
     this.references = config.projectReferences ?? [];
     this.resolved = {
@@ -141,6 +123,9 @@ export class Config {
     this.plugin.filter.configs = this.plugin.resolver.toPaths(concat([], this.input.path, source.extendedSourceFiles));
 
     // Finalise
+    this.message = this.input.path
+      ? ` • Using TSConfig at ${this.plugin.logger.formatPath(this.input.path)}`
+      : " • Using custom TSConfig";
     this.loaded = true;
     return true;
   }

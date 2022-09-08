@@ -56,8 +56,7 @@ export class Plugin {
     this.tracker.reset();
     this.logger.log([EmptyLine, apply("Awesome TypeScript v" + VERSION, Mode.Underline)]);
 
-    let core = this.compiler.init() && this.helpers.init() && this.config.init();
-    if (!core) {
+    if (!this.compiler.init() || !this.helpers.init() || !this.config.init()) {
       this.tracker.print();
       throw {
         plugin: "Awesome Typescript",

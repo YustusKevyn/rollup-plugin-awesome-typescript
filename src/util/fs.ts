@@ -1,6 +1,7 @@
 import { statSync } from "fs";
+import { fileURLToPath } from "url";
 
-export const isCaseSensitive = !fileExists(swapCase(__filename));
+export const isCaseSensitive = !fileExists(swapCase(fileURLToPath(import.meta.url)));
 
 export function fileExists(path: string) {
   try {

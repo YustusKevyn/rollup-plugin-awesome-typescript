@@ -25,7 +25,7 @@ export function intersection<T>(set1: Set<T>, set2: Set<T>, filter?: (value: T) 
     secondary = set1.size < set2.size ? set2 : set1;
 
   let final: Set<T> = new Set();
-  for (let value of primary) if (secondary.has(value) && (!filter || filter(value))) final.add(value);
+  for (let value of primary) if (secondary.has(value) && filter?.(value)) final.add(value);
   return final;
 }
 

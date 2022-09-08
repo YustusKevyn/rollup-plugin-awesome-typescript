@@ -1,77 +1,60 @@
 import type { Plugin } from "../plugin";
+import type { Message } from "../types";
 import type typescript from "typescript";
 
 import { lt } from "semver";
-import { join, resolve } from "path";
-import { apply, Color, Mode } from "../util/ansi";
-import { isDistinct, isRelative, normalise } from "../util/path";
+import { apply, Color } from "../util/ansi";
 
 export class Compiler {
-  private loaded: boolean = false;
-
   public instance!: typeof typescript;
-  private path!: string;
-  private package?: {
-    name: string;
-    version: string;
-  };
+
+  private loaded: boolean = false;
+  private message!: Message;
 
   constructor(private plugin: Plugin) {}
 
   public init() {
     if (!this.loaded && !this.load()) return false;
-    let message = [];
-
-    // Title
-    let title = " • Using compiler ";
-    if (!this.package) title += "at " + this.plugin.logger.formatPath(this.path);
-    else title += apply(this.package.name, Color.Yellow) + " v" + this.package.version;
-    message.push(title);
-
-    // Supported
-    if (this.package?.name !== "typescript")
-      message.push(apply("   This compiler may not be compatible with Awesome TypeScript", Mode.Dim));
-
-    // Finalise
-    this.plugin.logger.log(message);
+    this.plugin.logger.log(this.message);
     return true;
   }
 
   private load() {
-    let input = this.plugin.options.compiler ?? "typescript",
+    let input = this.plugin.options.compiler,
       tracker = this.plugin.tracker;
-    if (isRelative(input)) input = resolve(this.plugin.cwd, input);
 
-    // Path
-    try {
-      this.path = normalise(require.resolve(input));
-    } catch {
-      if (isDistinct(input)) tracker.recordError({ message: "Could not find the specified compiler.", path: input });
-      else tracker.recordError({ message: `Could not find the specified compiler "${input}".` });
-      return false;
+    // Custom
+    if (input) {
+      if (typeof input !== "object") {
+        tracker.recordError({ message: "Custom compiler must be passed as an instance." });
+        return false;
+      }
+
+      this.instance = input;
+      this.message = " • Using custom compiler";
     }
 
-    // Package
-    try {
-      this.package = require(join(input, "package.json"));
-    } catch {}
+    // Default
+    else {
+      let instance, config;
+      try {
+        instance = require("typescript");
+        config = require("typescript/package.json");
+      } catch {
+        tracker.recordError({ message: "Could not load TypeScript. Try installing it with `npm i -D typescript`" });
+        return false;
+      }
 
-    if (this.package?.name === "typescript" && lt(this.package.version, "4.5.0")) {
-      tracker.recordError({
-        message:
-          "This version of TypeScript is not compatible with Awesome TypeScript. Please upgrade to the latest release."
-      });
-      return false;
-    }
+      if (lt(config.version, "4.5.0")) {
+        tracker.recordError({
+          message:
+            "This version of TypeScript is not compatible with Awesome TypeScript. Please upgrade to the latest release."
+        });
+        return false;
+      }
 
-    // Instance
-    try {
-      this.instance = require(this.path);
-    } catch {
-      if (!this.package && isDistinct(input))
-        tracker.recordError({ message: "Could not load the specified compiler.", path: input });
-      else tracker.recordError({ message: `Could not load the specified compiler "${this.package?.name ?? input}".` });
-      return false;
+      this.instance = instance;
+      this.message = ` • Using ${apply("TypeScript", Color.Yellow)} v${config.version}`;
     }
 
     // Finalise

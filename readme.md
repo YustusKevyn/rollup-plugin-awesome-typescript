@@ -42,7 +42,7 @@ Just import and include the plugin in your
 [Rollup configuraton file](https://www.rollupjs.org/guide/en/#configuration-files)
 and you're good to go.
 
-```typescript
+```javascript
 import { awesomeTypescript } from "rollup-plugin-awesome-typescript";
 
 export default {
@@ -56,32 +56,32 @@ export default {
 
 ## Plugin Options
 
-#### `check`
+### `check`
 
-Type: `boolean`  
-Default: `true`
+**Type**: `boolean`  
+**Default**: `true`
 
 Specifies whether to enable type checking.
 
-#### `cwd`
+### `cwd`
 
-Type: `string`  
-Default: `process.cwd()`
+**Type**: `string`  
+**Default**: `process.cwd()`
 
 Specifies the current working directory.
 
-#### `context`
+### `context`
 
-Type: `string`  
-Default: The directory containing the TSConfig
+**Type**: `string`  
+**Default**: The directory containing the TSConfig
 
 Specifies the base path used to parse the TSConfig. Relative paths within the
 TSConfig are resolved with respect to this path.
 
-#### `config`
+### `config`
 
-Type: `string` | `false`  
-Default: `"tsconfig.json"`
+**Type**: `string` | `false`  
+**Default**: `"tsconfig.json"`
 
 Specifies which TSConfig should be used. Can be one of the following:
 
@@ -90,16 +90,16 @@ Specifies which TSConfig should be used. Can be one of the following:
   working directory
 - `false` to disable the usage of a TSConfig
 
-#### `compilerOptions`
+### `compilerOptions`
 
-Type: `CompilerOptions`
+**Type**: `CompilerOptions`
 
 Overrides the TSConfig compiler options.
 
-#### `logLevel`
+### `logLevel`
 
-Type: `LogLevel`  
-Default: `LogLevel.Info`
+**Type**: `LogLevel`  
+**Default**: `LogLevel.Info`
 
 Specifies the log level to which the log output should be restricted. Can
 be one of the following:
@@ -108,31 +108,37 @@ be one of the following:
 - `LogLevel.Warn`
 - `LogLevel.Info`
 
-#### `compiler`
+### `compiler`
 
-Type: `string`  
-Default: `"typescript"`
+**Type**: `object`  
+**Default**: _Peer dependency_
 
-Specifies the TypeScript compiler to use. Can be one of the following:
+Overrides the compiler used for transpilation with the specified instance.
 
-- A relative or absolute path pointing to a package or an entry file
-- The name of a local dependency
+```javascript
+awesomeTypescript({
+  compiler: require("typescript")
+});
+```
 
-#### `helpers`
+### `helpers`
 
-Type: `string`  
-Default: `"tslib"`
+**Type**: `string`  
+**Default**: _Peer dependency_
 
-Specifies the TypeScript helper library to use. Can be one of the
-following:
+Overrides the injected helper library. Must be a relative or absolute path
+pointing to an ES Module.
 
-- A relative or absolute path pointing to a package or an entry file
-- The name of a local dependency
+```javascript
+awesomeTypescript({
+  helpers: require.resolve("tslib")
+});
+```
 
-#### `declarations`
+### `declarations`
 
-Type: `string` | `boolean`  
-Default: TSConfig options
+**Type**: `string` | `boolean`  
+**Default**: _TSConfig options_
 
 Overrides the TSConfig options that determine if and where to store
 incremental compilation information. Can be one of the following:
@@ -145,10 +151,10 @@ incremental compilation information. Can be one of the following:
 
 If undefined, the corresponding options in the TSConfig are used as is.
 
-#### `buildInfo`
+### `buildInfo`
 
-Type: `string` | `boolean`  
-Default: TSConfig options
+**Type**: `string` | `boolean`  
+**Default**: _TSConfig options_
 
 Overrides the TSConfig options that determine if and where to output
 declaration files. Can be one of the following:

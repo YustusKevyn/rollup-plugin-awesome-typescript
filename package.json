@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-awesome-typescript",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "🚀 Makes development with Rollup and TypeScript awesome",
   "author": "Yanis Morgenegg",
   "license": "MIT",
@@ -15,7 +15,6 @@
     "url": "git+https://github.com/YustusKevyn/rollup-plugin-awesome-typescript.git"
   },
   "main": "lib/index.js",
-  "module": "lib/index.mjs",
   "types": "lib/index.d.ts",
   "files": [
     "lib"
@@ -25,12 +24,14 @@
     "build": "rollup -c rollup.config.js",
     "prepare": "npm run build"
   },
-  "dependencies": {
-    "true-case-path": "^2.2.1"
-  },
   "peerDependencies": {
     "tslib": ">=2.4.0",
     "typescript": ">=4.5.0"
+  },
+  "dependencies": {
+    "resolve.exports": "^1.1.0",
+    "semver": "^7.3.7",
+    "true-case-path": "^2.2.1"
   },
   "devDependencies": {
     "@rollup/plugin-replace": "^4.0.0",
@@ -41,7 +42,6 @@
     "rollup": "^2.77.0",
     "rollup-plugin-awesome-typescript": "^0.2.0",
     "rollup-plugin-dts": "^4.2.2",
-    "semver": "^7.3.7",
     "tslib": "2.4.0",
     "typescript": "^4.7.4"
   }

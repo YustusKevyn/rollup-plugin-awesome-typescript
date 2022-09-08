@@ -47,25 +47,15 @@ export interface Options {
   compilerOptions?: CompilerOptions | undefined;
 
   /**
-   * Specifies the TypeScript helper library to use. Can be one of the
-   * following:
-   *
-   * - A relative or absolute path pointing to a package or an entry file
-   * - The name of a local dependency
-   *
-   * Default is `"tslib"`
+   * Overrides the injected helper library. Must be a relative or absolute path
+   * pointing to an ES Module.
    */
   helpers?: string | undefined;
 
   /**
-   * Specifies the TypeScript compiler to use. Can be one of the following:
-   *
-   * - A relative or absolute path pointing to a package or an entry file
-   * - The name of a local dependency
-   *
-   * Default is `"typescript"`
+   * Overrides the compiler used for transpilation with the specified instance.
    */
-  compiler?: string | undefined;
+  compiler?: any;
 
   /**
    * Specifies whether to enable type checking.
