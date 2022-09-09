@@ -39,7 +39,7 @@ export interface Options {
    *
    * Default is `"tsconfig.json"`
    */
-  config?: string | object | false | undefined;
+  config?: string | false | undefined;
 
   /**
    * Overrides the TSConfig compiler options.

@@ -48,7 +48,7 @@ import { awesomeTypescript } from "rollup-plugin-awesome-typescript";
 export default {
   plugins: [
     awesomeTypescript({
-      // Plugin options go here
+      // plugin options go here
     })
   ]
 };
@@ -73,7 +73,7 @@ Specifies the current working directory.
 ### `context`
 
 **Type**: `string`  
-**Default**: The directory containing the TSConfig
+**Default**: _directory containing the TSConfig_
 
 Specifies the base path used to parse the TSConfig. Relative paths within the
 TSConfig are resolved with respect to this path.
@@ -92,7 +92,8 @@ Specifies which TSConfig should be used. Can be one of the following:
 
 ### `compilerOptions`
 
-**Type**: `CompilerOptions`
+**Type**: `object`  
+**Default**: ✗
 
 Overrides the TSConfig compiler options.
 
@@ -108,10 +109,18 @@ be one of the following:
 - `LogLevel.Warn`
 - `LogLevel.Info`
 
+```javascript
+import { LogLevel } from "rollup-plugin-awesome-typescript";
+
+awesomeTypescript({
+  logLevel: LogLevel.Error
+});
+```
+
 ### `compiler`
 
 **Type**: `object`  
-**Default**: _Peer dependency_
+**Default**: _peer dependency_
 
 Overrides the compiler used for transpilation with the specified instance.
 
@@ -124,7 +133,7 @@ awesomeTypescript({
 ### `helpers`
 
 **Type**: `string`  
-**Default**: _Peer dependency_
+**Default**: _peer dependency_
 
 Overrides the injected helper library. Must be a relative or absolute path
 pointing to an ES Module.
