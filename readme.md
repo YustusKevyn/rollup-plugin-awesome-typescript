@@ -9,8 +9,9 @@
   Monitors all contributing files, including type-only imports as well as
   declaration and configuration files.
 - **🦄 Delightful error messages**  
-  Detailed and beautifully formatted error messages display the erroneous code
-  as well as its surroundings to provide more context on what went wrong.
+  Provides detailed and beautifully formatted error messages that display the
+  erroneous code as well as its surroundings to provide more context on what
+  went wrong.
 - **🏃 Blazing fast rebuilds**  
   Uses a lightweight wrapper around TypeScript's incremental builder to achieve
   nearly the same speed as the TypeScript compiler itself would.
